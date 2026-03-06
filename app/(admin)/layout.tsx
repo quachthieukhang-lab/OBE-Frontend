@@ -11,6 +11,11 @@ import {
     ReadOutlined,
     ApartmentOutlined,
     ScheduleOutlined,
+    UserOutlined,
+    FormOutlined,
+    AimOutlined,
+    FlagOutlined,
+    CheckCircleOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -28,9 +33,14 @@ const MENU: MenuItem[] = [
     item("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
     item("Niên khóa", "/nien-khoa", <CalendarOutlined />),
     item("Đơn vị", "/don-vi", <ApartmentOutlined />),
+    item("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
     item("Học phần", "/hoc-phan", <BookOutlined />),
     item("Giảng viên", "/giang-vien", <TeamOutlined />),
-    item("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
+    item("Sinh viên", "/sinh-vien", <UserOutlined />),
+    item("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
+    item("PLO", "/plo", <AimOutlined />),
+    item("CLO", "/clo", <FlagOutlined />),
+    item("CO", "/co", <CheckCircleOutlined />),
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

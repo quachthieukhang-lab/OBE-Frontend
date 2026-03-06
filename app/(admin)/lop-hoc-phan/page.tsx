@@ -139,11 +139,11 @@ export default function LopHocPhanPage() {
         return gv ? `${gv.hoTen} (${gv.MSGV})` : v;
       },
     },
-    { title: "Khóa", dataIndex: "khoa", width: 90, render: (v) => <Tag>{`K${v}`}</Tag> },
-    { title: "Học kỳ", dataIndex: "hocKy", width: 90, render: (v) => <Tag>{`HK${v}`}</Tag> },
-    { title: "Nhóm", dataIndex: "nhom", width: 90, render: (v) => v ?? "-" },
-    { title: "Sĩ số", dataIndex: "siSoToiDa", width: 90, render: (v) => v ?? "-" },
-    { title: "Status", dataIndex: "status", width: 110, render: (v) => <Tag>{v ?? "-"}</Tag> },
+    { title: "Khóa", dataIndex: "khoa", width: 120, render: (v) => <Tag>{`K${v}`}</Tag> },
+    { title: "Học kỳ", dataIndex: "hocKy", width: 120, render: (v) => <Tag>{`HK${v}`}</Tag> },
+    { title: "Nhóm", dataIndex: "nhom", width: 120, render: (v) => v ?? "-" },
+    { title: "Sĩ số", dataIndex: "siSoToiDa", width: 120, render: (v) => v ?? "-" },
+    { title: "Status", dataIndex: "status", render: (v) => <Tag>{v ?? "-"}</Tag> },
     {
       title: "Hành động",
       key: "actions",
@@ -244,8 +244,8 @@ export default function LopHocPhanPage() {
         onCancel={() => setOpen(false)}
         onOk={onSubmit}
         confirmLoading={createMut.isPending || updateMut.isPending}
-        destroyOnClose
-        width={820}
+        destroyOnHidden
+        width={460}
       >
         <Form form={form} layout="vertical">
           <Space style={{ width: "100%" }} size={12}>
@@ -268,7 +268,7 @@ export default function LopHocPhanPage() {
               label="Học phần"
               name="maHocPhan"
               rules={[{ required: true, message: "Chọn học phần" }]}
-              style={{ flex: 1 }}
+              style={{ flex: 1, width: 200}}
             >
               <Select showSearch optionFilterProp="label" options={hpOptions} />
             </Form.Item>
@@ -277,7 +277,7 @@ export default function LopHocPhanPage() {
               label="Giảng viên"
               name="MSGV"
               rules={[{ required: true, message: "Chọn giảng viên" }]}
-              style={{ flex: 1 }}
+              style={{ flex: 1,  width: 200 }}
             >
               <Select showSearch optionFilterProp="label" options={gvOptions} />
             </Form.Item>
@@ -288,7 +288,7 @@ export default function LopHocPhanPage() {
               label="Khóa"
               name="khoa"
               rules={[{ required: true, message: "Chọn khóa" }]}
-              style={{ flex: 1 }}
+              style={{ flex: 1,  width: 80 }}
             >
               <Select options={nkOptions} />
             </Form.Item>
@@ -297,7 +297,7 @@ export default function LopHocPhanPage() {
               label="Học kỳ"
               name="hocKy"
               rules={[{ required: true, message: "Nhập học kỳ" }]}
-              style={{ flex: 1 }}
+              style={{ flex: 1,  width: 100 }}
             >
               <InputNumber style={{ width: "100%" }} min={1} />
             </Form.Item>
