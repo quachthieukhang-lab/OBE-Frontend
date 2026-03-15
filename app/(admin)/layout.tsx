@@ -16,6 +16,10 @@ import {
     AimOutlined,
     FlagOutlined,
     CheckCircleOutlined,
+    FileTextOutlined,
+    FileDoneOutlined,
+    BarChartOutlined,
+    UnorderedListOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -29,18 +33,23 @@ function item(label: React.ReactNode, key: string, icon?: React.ReactNode): Menu
 
 const MENU: MenuItem[] = [
     item("Dashboard", "/dashboard", <AppstoreOutlined />),
+    item("Đơn vị", "/don-vi", <ApartmentOutlined />),
+    item("Niên khóa", "/nien-khoa", <CalendarOutlined />),
     item("Chương trình đào tạo", "/chuong-trinh-dao-tao", <ReadOutlined />),
     item("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
-    item("Niên khóa", "/nien-khoa", <CalendarOutlined />),
-    item("Đơn vị", "/don-vi", <ApartmentOutlined />),
-    item("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
+    item("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
     item("Học phần", "/hoc-phan", <BookOutlined />),
-    item("Giảng viên", "/giang-vien", <TeamOutlined />),
-    item("Sinh viên", "/sinh-vien", <UserOutlined />),
+    item("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
+    item("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
     item("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
+    item("Giảng viên", "/giang-vien", <TeamOutlined />),
+    item("Phân công đề cương", "/phan-cong-de-cuong", <FileDoneOutlined />),
+    item("Sinh viên", "/sinh-vien", <UserOutlined />),
+    item("Điểm số", "/diem-so", <BarChartOutlined />),
     item("PLO", "/plo", <AimOutlined />),
     item("CLO", "/clo", <FlagOutlined />),
     item("CO", "/co", <CheckCircleOutlined />),
+    item("Ma trận CLO PLO","clo-plo-matrix", <UnorderedListOutlined />)
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
