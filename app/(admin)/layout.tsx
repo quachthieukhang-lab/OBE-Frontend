@@ -20,6 +20,7 @@ import {
     FileDoneOutlined,
     BarChartOutlined,
     UnorderedListOutlined,
+    TableOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -49,7 +50,9 @@ const MENU: MenuItem[] = [
     item("PLO", "/plo", <AimOutlined />),
     item("CLO", "/clo", <FlagOutlined />),
     item("CO", "/co", <CheckCircleOutlined />),
-    item("Ma trận CLO PLO","clo-plo-matrix", <UnorderedListOutlined />)
+    item("Ma trận CLO - PLO","clo-plo-matrix", <TableOutlined />),
+    item("Ma trận CO - CLO","co-clo-matrix", <TableOutlined />),
+    item("Ma trận CDG - CLO","cdg-co-matrix", <TableOutlined />),
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -77,8 +80,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 style={{
                     position: "sticky",
                     top: 0,
-                    height: "100vh",
+                    height: "95vh",
                     overflow: "auto",
+                    
                 }}
             >
                 <div

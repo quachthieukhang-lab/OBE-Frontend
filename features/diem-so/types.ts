@@ -40,6 +40,7 @@ export type DiemSo = {
   maLopHocPhan: string;
   maDangKy: string;
   diem: string; // Decimal -> string
+  tiLeHoanThanh?: string | null;
   MSGV?: string | null;
 
   createdAt: string;
