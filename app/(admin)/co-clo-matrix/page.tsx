@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, InputNumber, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -114,20 +114,36 @@ export default function CloCoMatrixPage() {
   const cos = matrixData?.cos ?? [];
   const mappings = matrixData?.mappings ?? [];
 
+  const initializedKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!maHocPhan) {
       setDraftValues({});
+      initializedKeyRef.current = null;
       return;
     }
 
-    const next: Record<string, string> = {};
+    if (!matrixData) return;
 
-    mappings.forEach((m) => {
+    const mappingsList = matrixData.mappings ?? [];
+
+    const initKey = JSON.stringify(
+      mappingsList.map((m) => ({
+        maCO: m.maCO,
+        maCLO: m.maCLO,
+        trongSo: String(m.trongSo),
+      }))
+    );
+
+    if (initializedKeyRef.current === initKey) return;
+
+    const next: Record<string, string> = {};
+    mappingsList.forEach((m) => {
       next[buildCellKey(m.maCO, m.maCLO)] = String(m.trongSo);
     });
 
+    initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, mappings]);
+  }, [maHocPhan, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return cos.map((co) => {
@@ -328,7 +344,10 @@ export default function CloCoMatrixPage() {
           placeholder="Chọn học phần"
           options={hocPhanOptions}
           value={maHocPhan}
-          onChange={setMaHocPhan}
+          onChange={(value) => {
+            initializedKeyRef.current = null;
+            setMaHocPhan(value);
+          }}
           showSearch
           optionFilterProp="label"
         />

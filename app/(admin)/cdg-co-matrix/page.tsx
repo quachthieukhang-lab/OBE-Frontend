@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, InputNumber, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -119,18 +119,36 @@ export default function CdgCoMatrixPage() {
   const cos = matrixData?.cos ?? [];
   const mappings = matrixData?.mappings ?? [];
 
+  const initializedKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!maHocPhan) {
       setDraftValues({});
+      initializedKeyRef.current = null;
       return;
     }
 
+    if (!matrixData) return;
+
+    const mappingsList = matrixData.mappings ?? [];
+
+    const initKey = JSON.stringify(
+      mappingsList.map((m) => ({
+        maCDG: m.maCDG,
+        maCO: m.maCO,
+        trongSo: String(m.trongSo),
+      }))
+    );
+
+    if (initializedKeyRef.current === initKey) return;
+
     const next: Record<string, string> = {};
-    mappings.forEach((m) => {
+    mappingsList.forEach((m) => {
       next[buildCellKey(m.maCDG, m.maCO)] = String(m.trongSo);
     });
+
+    initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, mappings]);
+  }, [maHocPhan, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return cdgs.map((cdg) => {
@@ -338,7 +356,10 @@ export default function CdgCoMatrixPage() {
           placeholder="Chọn học phần"
           options={hocPhanOptions}
           value={maHocPhan}
-          onChange={setMaHocPhan}
+          onChange={(value) => {
+            initializedKeyRef.current = null;
+            setMaHocPhan(value);
+          }}
           showSearch
           optionFilterProp="label"
         />

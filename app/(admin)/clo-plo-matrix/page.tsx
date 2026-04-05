@@ -123,8 +123,10 @@ export default function CloPloMatrixPage() {
 
     if (!matrixData) return;
 
+    const mappingsList = matrixData.mappings ?? [];
+
     const initKey = JSON.stringify(
-      mappings.map((m) => ({
+      mappingsList.map((m) => ({
         maCLO: m.maCLO,
         maPLO: m.maPLO,
         trongSo: String(m.trongSo),
@@ -134,13 +136,13 @@ export default function CloPloMatrixPage() {
     if (initializedKeyRef.current === initKey) return;
 
     const next: Record<string, string> = {};
-    mappings.forEach((m) => {
+    mappingsList.forEach((m) => {
       next[buildCellKey(m.maCLO, m.maPLO)] = String(m.trongSo);
     });
 
     initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, matrixData, mappings]);
+  }, [maHocPhan, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return clos.map((clo) => {
