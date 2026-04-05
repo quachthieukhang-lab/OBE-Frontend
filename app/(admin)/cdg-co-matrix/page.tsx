@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, InputNumber, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,9 +95,14 @@ async function deleteCdgCoMapping(payload: {
   );
 }
 
+function buildCellKey(maCDG: string, maCO: string) {
+  return `${maCDG}__${maCO}`;
+}
+
 export default function CdgCoMatrixPage() {
   const qc = useQueryClient();
   const [maHocPhan, setMaHocPhan] = useState<string>();
+  const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
   const { data: hocPhans = [] } = useQuery({
     queryKey: ["hoc-phan"],
@@ -114,23 +119,18 @@ export default function CdgCoMatrixPage() {
   const cos = matrixData?.cos ?? [];
   const mappings = matrixData?.mappings ?? [];
 
-  const saveMut = useMutation({
-    mutationFn: upsertCdgCoMapping,
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["cdg-co-mapping", maHocPhan] });
-      message.success("Đã lưu");
-    },
-    onError: () => message.error("Lưu thất bại"),
-  });
+  useEffect(() => {
+    if (!maHocPhan) {
+      setDraftValues({});
+      return;
+    }
 
-  const deleteMut = useMutation({
-    mutationFn: deleteCdgCoMapping,
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["cdg-co-mapping", maHocPhan] });
-      message.success("Đã xóa");
-    },
-    onError: () => message.error("Xóa thất bại"),
-  });
+    const next: Record<string, string> = {};
+    mappings.forEach((m) => {
+      next[buildCellKey(m.maCDG, m.maCO)] = String(m.trongSo);
+    });
+    setDraftValues(next);
+  }, [maHocPhan, mappings]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return cdgs.map((cdg) => {
@@ -143,15 +143,119 @@ export default function CdgCoMatrixPage() {
       };
 
       cos.forEach((co) => {
-        const hit = mappings.find(
-          (m) => m.maCDG === cdg.maCDG && m.maCO === co.maCO
-        );
-        row[co.maCO] = hit?.trongSo ?? null;
+        const key = buildCellKey(cdg.maCDG, co.maCO);
+        row[co.maCO] = draftValues[key] ?? null;
       });
 
       return row;
     });
-  }, [cdgs, cos, mappings]);
+  }, [cdgs, cos, draftValues]);
+
+  const getColumnTotal = (maCO: string) => {
+    let total = 0;
+
+    cdgs.forEach((cdg) => {
+      const raw = draftValues[buildCellKey(cdg.maCDG, maCO)];
+      if (raw != null && raw !== "") {
+        total += Number(raw);
+      }
+    });
+
+    return Number(total.toFixed(4));
+  };
+
+  const validateColumnTotals = () => {
+    const invalidColumns: Array<{
+      maCO: string;
+      label: string;
+      total: number;
+    }> = [];
+
+    cos.forEach((co) => {
+      const total = getColumnTotal(co.maCO);
+      if (total !== 0 && total !== 1) {
+        invalidColumns.push({
+          maCO: co.maCO,
+          label: co.code ?? co.maCO,
+          total,
+        });
+      }
+    });
+
+    return invalidColumns;
+  };
+
+  const saveAllMut = useMutation({
+    mutationFn: async () => {
+      if (!maHocPhan) return;
+
+      const invalidColumns = validateColumnTotals();
+      if (invalidColumns.length > 0) {
+        throw new Error(
+          invalidColumns.map((c) => `${c.label} = ${c.total}`).join(", ")
+        );
+      }
+
+      const existingMap = new Map(
+        mappings.map((m) => [buildCellKey(m.maCDG, m.maCO), String(m.trongSo)])
+      );
+
+      const allKeys = new Set([
+        ...Object.keys(draftValues),
+        ...Array.from(existingMap.keys()),
+      ]);
+
+      for (const key of allKeys) {
+        const [maCDG, maCO] = key.split("__");
+        const nextValue = draftValues[key];
+        const oldValue = existingMap.get(key);
+
+        if ((nextValue ?? undefined) === (oldValue ?? undefined)) {
+          continue;
+        }
+
+        if (nextValue == null || nextValue === "") {
+          if (oldValue != null) {
+            await deleteCdgCoMapping({
+              maHocPhan,
+              maCDG,
+              maCO,
+            });
+          }
+          continue;
+        }
+
+        await upsertCdgCoMapping({
+          maHocPhan,
+          maCDG,
+          maCO,
+          trongSo: nextValue,
+        });
+      }
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["cdg-co-mapping", maHocPhan] });
+      message.success("Lưu thành công");
+    },
+    onError: (error: any) => {
+      message.error(error?.message ?? "Lưu thất bại");
+    },
+  });
+
+  const handleSaveAll = () => {
+    const invalidColumns = validateColumnTotals();
+
+    if (invalidColumns.length > 0) {
+      message.error(
+        `Các cột chưa hợp lệ: ${invalidColumns
+          .map((c) => `${c.label} = ${c.total}`)
+          .join(", ")}`
+      );
+      return;
+    }
+
+    saveAllMut.mutate();
+  };
 
   const columns: ColumnsType<MatrixRow> = useMemo(() => {
     const base: ColumnsType<MatrixRow> = [
@@ -169,7 +273,7 @@ export default function CdgCoMatrixPage() {
         render: (v) => (v ? <Tag>{v}</Tag> : "-"),
       },
       {
-        title: "Trọng số CDG",
+        title: "TS CDG",
         dataIndex: "cdgTrongSo",
         width: 100,
         fixed: "left",
@@ -178,53 +282,48 @@ export default function CdgCoMatrixPage() {
     ];
 
     const dynamic: ColumnsType<MatrixRow> = cos.map((co) => ({
-      title: co.code ?? co.maCO,
+      title: (
+        <div>
+          <div style={{ fontWeight: 600 }}>{co.code ?? co.maCO}</div>
+          <div style={{ fontSize: 12, color: "#888" }}>
+            {co.noiDungChuanDauRa}
+          </div>
+        </div>
+      ),
       dataIndex: co.maCO,
-      width: 140,
-      render: (value: string | null | undefined, row: MatrixRow) => {
-        const current = value ? Number(value) : null;
+      width: 150,
+      render: (_value: string | null | undefined, row: MatrixRow) => {
+        const key = buildCellKey(row.maCDG, co.maCO);
+        const raw = draftValues[key];
+        const current = raw != null && raw !== "" ? Number(raw) : null;
 
         return (
-          <Space orientation="vertical" size={4}>
-            <InputNumber
-              min={0}
-              max={1}
-              step={0.01}
-              value={current}
-              style={{ width: 100 }}
-              onChange={(v) => {
-                if (v === null || v === undefined || !maHocPhan) return;
-                saveMut.mutate({
-                  maHocPhan,
-                  maCDG: row.maCDG,
-                  maCO: co.maCO,
-                  trongSo: String(v),
-                });
-              }}
-            />
-            {value ? (
-              <Button
-                size="small"
-                danger
-                onClick={() => {
-                  if (!maHocPhan) return;
-                  deleteMut.mutate({
-                    maHocPhan,
-                    maCDG: row.maCDG,
-                    maCO: co.maCO,
-                  });
-                }}
-              >
-                Xóa
-              </Button>
-            ) : null}
-          </Space>
+          <InputNumber
+            min={0}
+            max={1}
+            step={0.01}
+            value={current}
+            style={{ width: 100 }}
+            onChange={(v) => {
+              setDraftValues((prev) => {
+                const next = { ...prev };
+
+                if (v === null || v === undefined || v === "") {
+                  delete next[key];
+                } else {
+                  next[key] = String(v);
+                }
+
+                return next;
+              });
+            }}
+          />
         );
       },
     }));
 
     return [...base, ...dynamic];
-  }, [cos, maHocPhan, saveMut, deleteMut]);
+  }, [cos, draftValues]);
 
   const hocPhanOptions = hocPhans.map((hp) => ({
     label: `${hp.tenHocPhan} (${hp.maHocPhan})`,
@@ -243,6 +342,15 @@ export default function CdgCoMatrixPage() {
           showSearch
           optionFilterProp="label"
         />
+
+        <Button
+          type="primary"
+          onClick={handleSaveAll}
+          loading={saveAllMut.isPending}
+          disabled={!maHocPhan}
+        >
+          Lưu
+        </Button>
       </Space>
 
       <Table
@@ -253,6 +361,25 @@ export default function CdgCoMatrixPage() {
         scroll={{ x: 1400 }}
         pagination={false}
         bordered
+        summary={() => (
+          <Table.Summary.Row>
+            <Table.Summary.Cell index={0}>
+              <strong>Tổng cột</strong>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={1} />
+            <Table.Summary.Cell index={2} />
+            {cos.map((co, idx) => {
+              const total = getColumnTotal(co.maCO);
+              const isValid = total === 0 || total === 1;
+
+              return (
+                <Table.Summary.Cell key={co.maCO} index={idx + 3}>
+                  <Tag color={isValid ? "green" : "red"}>{total}</Tag>
+                </Table.Summary.Cell>
+              );
+            })}
+          </Table.Summary.Row>
+        )}
       />
     </div>
   );
