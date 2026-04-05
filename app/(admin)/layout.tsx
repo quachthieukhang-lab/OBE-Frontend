@@ -27,31 +27,50 @@ const { Sider, Header, Content } = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
-function item(label: React.ReactNode, key: string, icon?: React.ReactNode): MenuItem {
-  return { key, icon, label } as MenuItem;
+// Cập nhật hàm getItem để hỗ trợ children (SubMenu)
+function getItem(
+  label: React.ReactNode,
+  key: React.Key,
+  icon?: React.ReactNode,
+  children?: MenuItem[],
+  type?: "group"
+): MenuItem {
+  return { key, icon, children, label, type } as MenuItem;
 }
 
 const MENU: MenuItem[] = [
-  item("Dashboard", "/dashboard-admin", <AppstoreOutlined />),
-  item("Đơn vị", "/don-vi", <ApartmentOutlined />),
-  item("Niên khóa", "/nien-khoa", <CalendarOutlined />),
-  item("Chương trình đào tạo", "/chuong-trinh-dao-tao", <ReadOutlined />),
-  item("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
-  item("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
-  item("Học phần", "/hoc-phan", <BookOutlined />),
-  item("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
-  item("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
-  item("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
-  item("Giảng viên", "/giang-vien", <TeamOutlined />),
-  item("Phân công đề cương", "/phan-cong-de-cuong", <FileDoneOutlined />),
-  item("Sinh viên", "/sinh-vien", <UserOutlined />),
-  item("Điểm số", "/diem-so", <BarChartOutlined />),
-  item("PLO", "/plo", <AimOutlined />),
-  item("CLO", "/clo", <FlagOutlined />),
-  item("CO", "/co", <CheckCircleOutlined />),
-  item("Ma trận CLO - PLO", "/clo-plo-matrix", <TableOutlined />),
-  item("Ma trận CO - CLO", "/co-clo-matrix", <TableOutlined />),
-  item("Ma trận CDG - CO", "/cdg-co-matrix", <TableOutlined />),
+  getItem("Dashboard", "/dashboard-admin", <AppstoreOutlined />),
+
+  getItem("Danh mục cơ sở", "sub-master", <ApartmentOutlined />, [
+    getItem("Đơn vị", "/don-vi", <ApartmentOutlined />),
+    getItem("Niên khóa", "/nien-khoa", <CalendarOutlined />),
+    getItem("Giảng viên", "/giang-vien", <TeamOutlined />),
+    getItem("Sinh viên", "/sinh-vien", <UserOutlined />),
+  ]),
+
+  getItem("Chương trình đào tạo", "sub-curriculum", <ReadOutlined />, [
+    getItem("Chương trình đào tạo", "/chuong-trinh-dao-tao", <ReadOutlined />),
+    getItem("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
+    getItem("Học phần", "/hoc-phan", <BookOutlined />),
+    getItem("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
+    getItem("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
+  ]),
+
+  getItem("Vận hành học vụ", "sub-academic", <ScheduleOutlined />, [
+    getItem("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
+    getItem("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
+    getItem("Phân công đề cương", "/phan-cong-de-cuong", <FileDoneOutlined />),
+    getItem("Điểm số", "/diem-so", <BarChartOutlined />),
+  ]),
+
+  getItem("Quản lý OBE", "sub-obe", <AimOutlined />, [
+    getItem("PLO", "/plo", <AimOutlined />),
+    getItem("CLO", "/clo", <FlagOutlined />),
+    getItem("CO", "/co", <CheckCircleOutlined />),
+    getItem("Ma trận CLO - PLO", "/clo-plo-matrix", <TableOutlined />),
+    getItem("Ma trận CO - CLO", "/co-clo-matrix", <TableOutlined />),
+    getItem("Ma trận CDG - CO", "/cdg-co-matrix", <TableOutlined />),
+  ]),
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -64,11 +83,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setMounted(true);
   }, []);
 
+  const flatMenu = useMemo(() => {
+    const flat: any[] = [];
+    MENU.forEach((m: any) => {
+      if (m.children) flat.push(...m.children);
+      else flat.push(m);
+    });
+    return flat;
+  }, []);
+
   const selectedKey = useMemo(() => {
-    const hit = MENU.find(
-      (m: any) => pathname === m.key || pathname.startsWith(`${m.key}/`)
+    const hit = flatMenu.find(
+      (m) => pathname === m.key || pathname.startsWith(`${m.key}/`)
     );
-    return hit ? [String((hit as any).key)] : [];
+    return hit ? [String(hit.key)] : [];
+  }, [pathname, flatMenu]);
+
+  const defaultOpenKeys = useMemo(() => {
+    const parent = MENU.find((m: any) =>
+      m.children?.some(
+        (child: any) => pathname === child.key || pathname.startsWith(`${child.key}/`)
+      )
+    );
+    return parent ? [String((parent as any).key)] : [];
   }, [pathname]);
 
   const onClick: MenuProps["onClick"] = (e) => {
@@ -87,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         style={{
           position: "sticky",
           top: 0,
-          height: "95vh",
+          height: "100vh", // Nên để 100vh thay vì 95vh để layout sidebar tràn viền mượt hơn
           overflow: "auto",
         }}
       >
@@ -110,6 +147,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           mode="inline"
           items={MENU}
           selectedKeys={selectedKey}
+          defaultOpenKeys={defaultOpenKeys}
           onClick={onClick}
         />
       </Sider>
