@@ -48,15 +48,24 @@ type DisplayRow = {
     tiLeHoanThanh?: string;
 };
 
+type BulkEditRow = {
+    key: string;
+    maCDG: string;
+    tenThanhPhan: string;
+    loai?: string | null;
+    trongSo: string;
+    diem?: string;
+    MSGV?: string | null;
+};
+
 export default function DiemSoPage() {
     const qc = useQueryClient();
-    const [form] = Form.useForm<any>();
 
     const [selectedClass, setSelectedClass] = useState<string | undefined>();
     const [q, setQ] = useState("");
     const [open, setOpen] = useState(false);
-    const [mode, setMode] = useState<Mode>("create");
-    const [editing, setEditing] = useState<{ maDangKy: string; item?: DiemSo } | null>(null);
+    const [editing, setEditing] = useState<{ maDangKy: string; MSSV: string; hoTen?: string } | null>(null);
+    const [bulkValues, setBulkValues] = useState<Record<string, { diem?: string; MSGV?: string | null }>>({});
 
     const { data: classes = [] } = useQuery({
         queryKey: ["lop-hoc-phan"],
@@ -118,7 +127,6 @@ export default function DiemSoPage() {
                 MSSV: e.MSSV,
                 hoTen: sv?.hoTen,
                 diemItems: diemQueries[idx]?.data ?? [],
-                tiLeHoanThanh: diemQueries[idx]?.data ?? []
             };
         });
 
@@ -130,37 +138,55 @@ export default function DiemSoPage() {
         });
     }, [enrollments, diemQueries, students, q]);
 
-    const createMut = useMutation({
-        mutationFn: async (payload: { maDangKy: string; data: { maCDG: string; diem: string; MSGV?: string | null } }) =>
-            createDiemSo(payload.maDangKy, payload.data),
-        onSuccess: async () => {
-            message.success("Tạo điểm thành công");
-            setOpen(false);
-            form.resetFields();
-            await qc.invalidateQueries({ queryKey: ["diem-so"] });
-        },
-        onError: (e: any) => message.error(e?.response?.data?.message ?? "Tạo thất bại"),
-    });
+    const bulkSaveMut = useMutation({
+        mutationFn: async (payload: {
+            maDangKy: string;
+            originalItems: DiemSo[];
+            values: Record<string, { diem?: string; MSGV?: string | null }>;
+        }) => {
+            const { maDangKy, originalItems, values } = payload;
+            const existingMap = new Map(originalItems.map((item) => [item.maCDG, item]));
 
-    const updateMut = useMutation({
-        mutationFn: async (payload: { maDangKy: string; maCDG: string; data: Partial<{ diem: string; MSGV?: string | null }> }) =>
-            updateDiemSo(payload.maDangKy, payload.maCDG, payload.data),
-        onSuccess: async () => {
-            message.success("Cập nhật điểm thành công");
-            setOpen(false);
-            form.resetFields();
-            await qc.invalidateQueries({ queryKey: ["diem-so"] });
-        },
-        onError: (e: any) => message.error(e?.response?.data?.message ?? "Cập nhật thất bại"),
-    });
+            for (const cdg of cdgs) {
+                const next = values[cdg.maCDG];
+                const existed = existingMap.get(cdg.maCDG);
+                const nextDiem = next?.diem?.trim();
+                const nextMSGV = next?.MSGV ?? null;
 
-    const deleteMut = useMutation({
-        mutationFn: async (payload: { maDangKy: string; maCDG: string }) => deleteDiemSo(payload.maDangKy, payload.maCDG),
+                // Để trống điểm => xóa bản ghi nếu đã tồn tại.
+                if (!nextDiem) {
+                    if (existed) {
+                        await deleteDiemSo(maDangKy, cdg.maCDG);
+                    }
+                    continue;
+                }
+
+                if (!existed) {
+                    await createDiemSo(maDangKy, {
+                        maCDG: cdg.maCDG,
+                        diem: nextDiem,
+                        MSGV: nextMSGV,
+                    });
+                    continue;
+                }
+
+                const oldDiem = String(existed.diem);
+                const oldMSGV = existed.MSGV ?? null;
+                if (oldDiem !== nextDiem || oldMSGV !== nextMSGV) {
+                    await updateDiemSo(maDangKy, cdg.maCDG, {
+                        diem: nextDiem,
+                        MSGV: nextMSGV,
+                    });
+                }
+            }
+        },
         onSuccess: async () => {
-            message.success("Đã xóa điểm");
+            message.success("Đã lưu điểm thành phần");
+            setOpen(false);
+            setEditing(null);
             await qc.invalidateQueries({ queryKey: ["diem-so"] });
         },
-        onError: (e: any) => message.error(e?.response?.data?.message ?? "Xóa thất bại"),
+        onError: (e: any) => message.error(e?.response?.data?.message ?? "Lưu điểm thất bại"),
     });
 
     const giangVienOptions = useMemo(
@@ -170,15 +196,6 @@ export default function DiemSoPage() {
                 value: gv.MSGV,
             })),
         [giangViens]
-    );
-
-    const cdgOptions = useMemo(
-        () =>
-            cdgs.map((c: CachDanhGia) => ({
-                label: `${c.tenThanhPhan}${c.loai ? ` - ${c.loai}` : ""} (${c.trongSo})`,
-                value: c.maCDG,
-            })),
-        [cdgs]
     );
 
     const columns: ColumnsType<DisplayRow> = [
@@ -245,86 +262,116 @@ export default function DiemSoPage() {
         {
             title: "Hành động",
             key: "actions",
-            width: 120,
+            width: 180,
             render: (_, row) => (
                 <Space wrap>
                     <Button
                         type="primary"
                         onClick={() => {
-                            setMode("create");
-                            setEditing({ maDangKy: row.maDangKy });
-                            form.resetFields();
+                            const map: Record<string, { diem?: string; MSGV?: string | null }> = {};
+                            row.diemItems.forEach((item) => {
+                                map[item.maCDG] = {
+                                    diem: String(item.diem),
+                                    MSGV: item.MSGV ?? null,
+                                };
+                            });
+                            setBulkValues(map);
+                            setEditing({ maDangKy: row.maDangKy, MSSV: row.MSSV, hoTen: row.hoTen });
                             setOpen(true);
                         }}
                     >
-                        Thêm điểm
+                        Sửa điểm
                     </Button>
-
-                    {row.diemItems.map((item) => (
-                        <Space key={item.id}>
-                            <Button
-                                size="small"
-                                onClick={() => {
-                                    setMode("edit");
-                                    setEditing({ maDangKy: row.maDangKy, item });
-                                    form.setFieldsValue({
-                                        maCDG: item.maCDG,
-                                        diem: Number(item.diem),
-                                        MSGV: item.MSGV ?? undefined,
-                                    });
-                                    setOpen(true);
-                                }}
-                            >
-                                Sửa
-                            </Button>
-
-                            <Popconfirm
-                                title="Xóa điểm?"
-                                okText="Xóa"
-                                cancelText="Hủy"
-                                onConfirm={() =>
-                                    deleteMut.mutate({ maDangKy: row.maDangKy, maCDG: item.maCDG })
-                                }
-                            >
-                                <Button size="small" danger loading={deleteMut.isPending}>
-                                    Xóa
-                                </Button>
-                            </Popconfirm>
-                        </Space>
-                    ))}
                 </Space>
+            ),
+        },
+    ];
+
+    const bulkRows: BulkEditRow[] = useMemo(() => {
+        return cdgs.map((cdg) => ({
+            key: cdg.maCDG,
+            maCDG: cdg.maCDG,
+            tenThanhPhan: cdg.tenThanhPhan,
+            loai: cdg.loai,
+            trongSo: cdg.trongSo,
+            diem: bulkValues[cdg.maCDG]?.diem,
+            MSGV: bulkValues[cdg.maCDG]?.MSGV ?? null,
+        }));
+    }, [cdgs, bulkValues]);
+
+    const bulkColumns: ColumnsType<BulkEditRow> = [
+        {
+            title: "Thành phần",
+            dataIndex: "tenThanhPhan",
+            width: 260,
+            render: (_, row) => (
+                <div>
+                    <div style={{ fontWeight: 500 }}>{row.tenThanhPhan}</div>
+                    <div style={{ fontSize: 12, color: "#888" }}>
+                        {row.loai ? `${row.loai} • ` : ""}Trọng số: {row.trongSo}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: "Điểm",
+            dataIndex: "diem",
+            width: 170,
+            render: (_value, row) => (
+                <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.25}
+                    style={{ width: "100%" }}
+                    value={row.diem != null && row.diem !== "" ? Number(row.diem) : null}
+                    onChange={(v) => {
+                        setBulkValues((prev) => ({
+                            ...prev,
+                            [row.maCDG]: {
+                                ...(prev[row.maCDG] ?? {}),
+                                diem: v == null ? undefined : String(v),
+                            },
+                        }));
+                    }}
+                />
+            ),
+        },
+        {
+            title: "Giảng viên nhập",
+            dataIndex: "MSGV",
+            render: (_value, row) => (
+                <Select
+                    allowClear
+                    options={giangVienOptions}
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ minWidth: 240 }}
+                    value={row.MSGV ?? undefined}
+                    onChange={(v) => {
+                        setBulkValues((prev) => ({
+                            ...prev,
+                            [row.maCDG]: {
+                                ...(prev[row.maCDG] ?? {}),
+                                MSGV: v ?? null,
+                            },
+                        }));
+                    }}
+                />
             ),
         },
     ];
 
     const onSubmit = async () => {
         if (!editing) return;
-
-        const v = await form.validateFields();
-
-        const payload = {
-            maCDG: v.maCDG,
-            diem: String(v.diem),
-            MSGV: v.MSGV ?? null,
-        };
-
-        if (mode === "create") {
-            createMut.mutate({
-                maDangKy: editing.maDangKy,
-                data: payload,
-            });
+        const touchedValues = Object.values(bulkValues).filter((x) => x?.diem != null && x.diem !== "");
+        if (!touchedValues.length) {
+            message.warning("Nhập ít nhất 1 điểm thành phần");
             return;
         }
-
-        if (!editing.item) return;
-
-        updateMut.mutate({
+        bulkSaveMut.mutate({
             maDangKy: editing.maDangKy,
-            maCDG: editing.item.maCDG,
-            data: {
-                diem: payload.diem,
-                MSGV: payload.MSGV,
-            },
+            originalItems: rows.find((r) => r.maDangKy === editing.maDangKy)?.diemItems ?? [],
+            values: bulkValues,
         });
     };
 
@@ -365,53 +412,24 @@ export default function DiemSoPage() {
 
             <Modal
                 open={open}
-                title={mode === "create" ? "Thêm điểm" : "Sửa điểm"}
+                title={
+                    editing ? `Sửa điểm thành phần: ${editing.hoTen ?? ""} (${editing.MSSV})` : "Sửa điểm thành phần"
+                }
                 onCancel={() => setOpen(false)}
                 onOk={onSubmit}
-                confirmLoading={createMut.isPending || updateMut.isPending}
+                confirmLoading={bulkSaveMut.isPending}
                 destroyOnHidden
-                width={720}
+                width={980}
+                okText="Lưu tất cả"
             >
-                <Form form={form} layout="vertical">
-                    <Form.Item
-                        label="Cách đánh giá"
-                        name="maCDG"
-                        rules={[{ required: true, message: "Chọn cách đánh giá" }]}
-                    >
-                        <Select
-                            options={cdgOptions}
-                            showSearch
-                            optionFilterProp="label"
-                            disabled={mode === "edit"}
-                        />
-                    </Form.Item>
-
-                    <Space style={{ width: "100%" }} size={12}>
-                        <Form.Item
-                            label="Điểm"
-                            name="diem"
-                            rules={[{ required: true, message: "Nhập điểm" }]}
-                            style={{ flex: 1 }}
-                        >
-                            <InputNumber
-                                min={0}
-                                max={10}
-                                step={0.25}
-                                style={{ width: "100%" }}
-                                stringMode
-                            />
-                        </Form.Item>
-
-                        <Form.Item label="Giảng viên nhập" name="MSGV" style={{ flex: 1 }}>
-                            <Select
-                                allowClear
-                                options={giangVienOptions}
-                                showSearch
-                                optionFilterProp="label"
-                            />
-                        </Form.Item>
-                    </Space>
-                </Form>
+                <Table
+                    rowKey="key"
+                    size="small"
+                    columns={bulkColumns}
+                    dataSource={bulkRows}
+                    pagination={false}
+                    bordered
+                />
             </Modal>
         </div>
     );

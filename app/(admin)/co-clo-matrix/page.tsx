@@ -283,7 +283,7 @@ export default function CloCoMatrixPage() {
         dataIndex: "coText",
         width: 320,
         fixed: "left",
-        ellipsis: true,
+        ellipsis: false,
       },
     ];
 

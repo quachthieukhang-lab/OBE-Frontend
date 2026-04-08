@@ -282,7 +282,7 @@ export default function CloPloMatrixPage() {
         dataIndex: "cloText",
         width: 320,
         fixed: "left",
-        ellipsis: true,
+        ellipsis: false,
       },
     ];
 

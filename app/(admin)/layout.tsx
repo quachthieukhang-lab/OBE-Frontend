@@ -78,6 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [manualOpenKeys, setManualOpenKeys] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -99,7 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return hit ? [String(hit.key)] : [];
   }, [pathname, flatMenu]);
 
-  const defaultOpenKeys = useMemo(() => {
+  const routeOpenKeys = useMemo(() => {
     const parent = MENU.find((m: any) =>
       m.children?.some(
         (child: any) => pathname === child.key || pathname.startsWith(`${child.key}/`)
@@ -107,6 +108,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
     return parent ? [String((parent as any).key)] : [];
   }, [pathname]);
+
+  useEffect(() => {
+    setManualOpenKeys(routeOpenKeys);
+  }, [routeOpenKeys]);
 
   const onClick: MenuProps["onClick"] = (e) => {
     router.push(e.key);
@@ -147,7 +152,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           mode="inline"
           items={MENU}
           selectedKeys={selectedKey}
-          defaultOpenKeys={defaultOpenKeys}
+          openKeys={manualOpenKeys}
+          onOpenChange={(keys) => setManualOpenKeys(keys as string[])}
           onClick={onClick}
         />
       </Sider>

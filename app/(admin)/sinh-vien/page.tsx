@@ -14,6 +14,8 @@ import {
   Table,
   Tag,
   message,
+  Row,
+  Col
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -116,7 +118,7 @@ export default function SinhVienPage() {
 
   const columns: ColumnsType<SinhVien> = [
     { title: "MSSV", dataIndex: "MSSV", width: 130 },
-    { title: "Họ tên", dataIndex: "hoTen", ellipsis: true, width: 130},
+    { title: "Họ tên", dataIndex: "hoTen", ellipsis: true, width: 130 },
     {
       title: "Khóa",
       dataIndex: "khoa",
@@ -240,74 +242,91 @@ export default function SinhVienPage() {
         width={820}
       >
         <Form form={form} layout="vertical">
-          <Space style={{ width: "100%" }} size={12}>
-            <Form.Item
-              label="MSSV"
-              name="MSSV"
-              rules={[{ required: true, message: "Nhập MSSV" }]}
-              style={{ flex: 1 }}
-            >
-              <Input disabled={mode === "edit"} placeholder="VD: B2203505" />
-            </Form.Item>
+          {/* Hàng 1: MSSV (1/3) - Họ tên (2/3) */}
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                label="MSSV"
+                name="MSSV"
+                rules={[{ required: true, message: "Nhập MSSV" }]}
+              >
+                <Input disabled={mode === "edit"} placeholder="VD: B2203505" />
+              </Form.Item>
+            </Col>
+            <Col span={16}>
+              <Form.Item
+                label="Họ tên"
+                name="hoTen"
+                rules={[{ required: true, message: "Nhập họ tên" }]}
+              >
+                <Input placeholder="Nhập họ tên đầy đủ" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            <Form.Item
-              label="Họ tên"
-              name="hoTen"
-              rules={[{ required: true, message: "Nhập họ tên" }]}
-              style={{ flex: 2 }}
-            >
-              <Input />
-            </Form.Item>
-          </Space>
+          {/* Hàng 2: Niên khóa (1/4) - CTĐT (~40%) - Đơn vị (~35%) */}
+          <Row gutter={16}>
+            <Col span={6}>
+              <Form.Item label="Niên khóa" name="khoa">
+                <Select allowClear options={nkOptions} placeholder="Chọn khóa" />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item label="CTĐT" name="maSoNganh">
+                <Select
+                  allowClear
+                  options={programOptions}
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn CTĐT"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Đơn vị" name="maDonVi">
+                <Select
+                  allowClear
+                  options={donViOptions}
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="Chọn đơn vị"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Space style={{ width: "100%" }} size={12}>
-            <Form.Item label="Niên khóa" name="khoa" style={{ flex: 1 }}>
-              <Select allowClear options={nkOptions} placeholder="Chọn khóa" />
-            </Form.Item>
+          {/* Hàng 3: Ngày sinh - Giới tính - Trạng thái học tập (Chia đều 3) */}
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="Ngày sinh" name="ngaySinh">
+                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Chọn ngày sinh" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Giới tính" name="gioiTinh">
+                <Select allowClear options={GIOI_TINH_OPTIONS} placeholder="Chọn giới tính" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Trạng thái học tập" name="trangThaiHocTap">
+                <Select allowClear options={TRANG_THAI_OPTIONS} placeholder="Chọn trạng thái" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            <Form.Item label="CTĐT" name="maSoNganh" style={{ flex: 2 }}>
-              <Select
-                allowClear
-                options={programOptions}
-                showSearch
-                optionFilterProp="label"
-                placeholder="Chọn chương trình đào tạo"
-              />
-            </Form.Item>
-
-            <Form.Item label="Đơn vị" name="maDonVi" style={{ flex: 2 }}>
-              <Select
-                allowClear
-                options={donViOptions}
-                showSearch
-                optionFilterProp="label"
-                placeholder="Chọn đơn vị"
-              />
-            </Form.Item>
-          </Space>
-
-          <Space style={{ width: "100%" }} size={12}>
-            <Form.Item label="Ngày sinh" name="ngaySinh" style={{ flex: 1 }}>
-              <DatePicker style={{ width: "100%" }} />
-            </Form.Item>
-
-            <Form.Item label="Giới tính" name="gioiTinh" style={{ flex: 1 }}>
-              <Select allowClear options={GIOI_TINH_OPTIONS} />
-            </Form.Item>
-
-            <Form.Item label="Trạng thái học tập" name="trangThaiHocTap" style={{ flex: 1 }}>
-              <Select allowClear options={TRANG_THAI_OPTIONS} />
-            </Form.Item>
-          </Space>
-
-          <Space style={{ width: "100%" }} size={12}>
-            <Form.Item label="Email" name="email" style={{ flex: 1 }}>
-              <Input />
-            </Form.Item>
-            <Form.Item label="Số điện thoại" name="soDienThoai" style={{ flex: 1 }}>
-              <Input />
-            </Form.Item>
-          </Space>
+          {/* Hàng 4: Email (1/2) - Số điện thoại (1/2) */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Email" name="email">
+                <Input placeholder="Nhập địa chỉ email" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Số điện thoại" name="soDienThoai">
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>
