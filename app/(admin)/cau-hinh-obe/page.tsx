@@ -5,10 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Form,
-  Input,
   InputNumber,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Table,
   Tag,
@@ -18,39 +18,65 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
-import type { CauHinhObe } from "@/features/cau-hinh-obe/types";
+import type { CauHinhObe, DonVi, NienKhoa } from "@/features/cau-hinh-obe/types";
 import {
   createCauHinhObe,
   deleteCauHinhObe,
   listCauHinhObe,
   updateCauHinhObe,
 } from "@/features/cau-hinh-obe/api";
+import { listNienKhoa } from "@/features/nien-khoa/api";
+import { listDonVi } from "@/features/don-vi/api";
 
 const { Text } = Typography;
-
 type Mode = "create" | "edit";
 
 export default function CauHinhObePage() {
   const qc = useQueryClient();
   const [form] = Form.useForm<any>();
 
-  const [qNamHoc, setQNamHoc] = useState("");
+  const [qKhoa, setQKhoa] = useState<number | undefined>(undefined);
+  const [qMaDonVi, setQMaDonVi] = useState<string | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
   const [editing, setEditing] = useState<CauHinhObe | null>(null);
 
-  const queryKey = useMemo(
-    () => ["cau-hinh-obe", { namHoc: qNamHoc }],
-    [qNamHoc]
-  );
-
   const { data: rows = [], isLoading } = useQuery({
-    queryKey,
+    queryKey: ["cau-hinh-obe", { khoa: qKhoa, maDonVi: qMaDonVi }],
     queryFn: () =>
       listCauHinhObe({
-        namHoc: qNamHoc || undefined,
+        khoa: qKhoa,
+        maDonVi: qMaDonVi,
       }),
   });
+
+  const { data: nienKhoas = [] } = useQuery({
+    queryKey: ["nien-khoa"],
+    queryFn: listNienKhoa,
+  });
+
+  const { data: donVis = [] } = useQuery({
+    queryKey: ["don-vi"],
+    queryFn: listDonVi,
+  });
+
+  const nienKhoaOptions = useMemo(
+    () =>
+      nienKhoas.map((nk: NienKhoa) => ({
+        label: `K${nk.khoa} (${nk.namBatDau}${nk.namKetThuc ? ` - ${nk.namKetThuc}` : ""})`,
+        value: nk.khoa,
+      })),
+    [nienKhoas]
+  );
+
+  const donViOptions = useMemo(
+    () =>
+      donVis.map((dv: DonVi) => ({
+        label: `${dv.tenDonVi} (${dv.maDonVi})`,
+        value: dv.maDonVi,
+      })),
+    [donVis]
+  );
 
   const createMut = useMutation({
     mutationFn: createCauHinhObe,
@@ -71,7 +97,8 @@ export default function CauHinhObePage() {
     }: {
       id: string;
       payload: Partial<{
-        namHoc: string;
+        khoa: number;
+        maDonVi: string;
         nguongDatCaNhan: string;
         kpiLopHoc: string;
       }>;
@@ -98,10 +125,26 @@ export default function CauHinhObePage() {
 
   const columns: ColumnsType<CauHinhObe> = [
     {
-      title: "Năm học",
-      dataIndex: "namHoc",
-      width: 160,
-      render: (v) => <Tag color="blue">{v}</Tag>,
+      title: "Đơn vị",
+      key: "donVi",
+      width: 220,
+      render: (_, row) =>
+        row.donVi ? `${row.donVi.tenDonVi} (${row.donVi.maDonVi})` : "-",
+    },
+    {
+      title: "Khóa",
+      dataIndex: "khoa",
+      width: 120,
+      render: (v) => <Tag color="blue">{`K${v}`}</Tag>,
+    },
+    {
+      title: "Niên khóa",
+      key: "nienKhoa",
+      width: 180,
+      render: (_, row) =>
+        row.nienKhoa
+          ? `${row.nienKhoa.namBatDau}${row.nienKhoa.namKetThuc ? ` - ${row.nienKhoa.namKetThuc}` : ""}`
+          : "-",
     },
     {
       title: "Ngưỡng đạt cá nhân",
@@ -148,7 +191,8 @@ export default function CauHinhObePage() {
               setMode("edit");
               setEditing(row);
               form.setFieldsValue({
-                namHoc: row.namHoc,
+                khoa: row.khoa,
+                maDonVi: row.maDonVi,
                 nguongDatCaNhan: Number(row.nguongDatCaNhan),
                 kpiLopHoc: Number(row.kpiLopHoc),
               });
@@ -188,7 +232,8 @@ export default function CauHinhObePage() {
     const v = await form.validateFields();
 
     const payload = {
-      namHoc: v.namHoc,
+      khoa: Number(v.khoa),
+      maDonVi: v.maDonVi,
       nguongDatCaNhan: String(v.nguongDatCaNhan),
       kpiLopHoc: String(v.kpiLopHoc),
     };
@@ -216,12 +261,25 @@ export default function CauHinhObePage() {
         }}
         wrap
       >
-        <Input.Search
-          placeholder="Lọc theo năm học, ví dụ 2025-2026"
-          allowClear
-          onSearch={setQNamHoc}
-          style={{ maxWidth: 320 }}
-        />
+        <Space wrap>
+          <Select
+            allowClear
+            placeholder="Lọc theo đơn vị"
+            options={donViOptions}
+            value={qMaDonVi}
+            onChange={setQMaDonVi}
+            style={{ width: 260 }}
+          />
+
+          <Select
+            allowClear
+            placeholder="Lọc theo khóa"
+            options={nienKhoaOptions}
+            value={qKhoa}
+            onChange={setQKhoa}
+            style={{ width: 220 }}
+          />
+        </Space>
 
         <Button type="primary" onClick={openCreate}>
           Tạo cấu hình OBE
@@ -242,16 +300,32 @@ export default function CauHinhObePage() {
         onCancel={() => setOpen(false)}
         onOk={onSubmit}
         confirmLoading={createMut.isPending || updateMut.isPending}
-        destroyOnHidden
+        destroyOnClose
         width={640}
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            label="Năm học"
-            name="namHoc"
-            rules={[{ required: true, message: "Nhập năm học" }]}
+            label="Đơn vị"
+            name="maDonVi"
+            rules={[{ required: true, message: "Chọn đơn vị" }]}
           >
-            <Input placeholder="VD: 2025-2026" />
+            <Select
+              options={donViOptions}
+              placeholder="Chọn đơn vị"
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Khóa"
+            name="khoa"
+            rules={[{ required: true, message: "Chọn khóa" }]}
+          >
+            <Select
+              options={nienKhoaOptions}
+              placeholder="Chọn niên khóa"
+            />
           </Form.Item>
 
           <Form.Item

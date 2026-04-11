@@ -1,20 +1,14 @@
 import { http } from "@/lib/api/http";
 import type { CauHinhObe } from "./types";
 
-export async function listCauHinhObe(params: { namHoc?: string } = {}) {
-  const res = await http.get<CauHinhObe[] | CauHinhObe>("/cau-hinh-obe", {
-    params,
-  });
-
-  // Backend của bạn hiện tại:
-  // - GET /cau-hinh-obe => array
-  // - GET /cau-hinh-obe?namHoc=... => object
-  // Chuẩn hóa lại cho frontend.
-  return Array.isArray(res.data) ? res.data : [res.data];
+export async function listCauHinhObe(params: { khoa?: number; maDonVi?: string } = {}) {
+  const res = await http.get<CauHinhObe[]>("/cau-hinh-obe", { params });
+  return res.data;
 }
 
 export async function createCauHinhObe(payload: {
-  namHoc: string;
+  khoa: number;
+  maDonVi: string;
   nguongDatCaNhan: string;
   kpiLopHoc: string;
 }) {
@@ -25,7 +19,8 @@ export async function createCauHinhObe(payload: {
 export async function updateCauHinhObe(
   id: string,
   payload: Partial<{
-    namHoc: string;
+    khoa: number;
+    maDonVi: string;
     nguongDatCaNhan: string;
     kpiLopHoc: string;
   }>

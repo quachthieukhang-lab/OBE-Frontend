@@ -19,3 +19,4 @@ export async function updateNienKhoa(khoa: number, payload: Partial<NienKhoa>) {
 export async function deleteNienKhoa(khoa: number) {
   await http.delete(`/nien-khoa/${khoa}`);
 }
+
