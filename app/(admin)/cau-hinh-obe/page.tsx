@@ -300,7 +300,7 @@ export default function CauHinhObePage() {
         onCancel={() => setOpen(false)}
         onOk={onSubmit}
         confirmLoading={createMut.isPending || updateMut.isPending}
-        destroyOnClose
+        destroyOnHidden
         width={640}
       >
         <Form form={form} layout="vertical">

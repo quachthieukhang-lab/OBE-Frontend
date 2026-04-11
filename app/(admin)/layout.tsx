@@ -41,7 +41,7 @@ function getItem(
 
 const MENU: MenuItem[] = [
   getItem("Dashboard", "/dashboard-admin", <AppstoreOutlined />),
-
+  getItem("Bảng phân tích OBE", "/admin-obe-dashboard",<AppstoreOutlined /> ),
   getItem("Danh mục cơ sở", "sub-master", <ApartmentOutlined />, [
     getItem("Đơn vị", "/don-vi", <ApartmentOutlined />),
     getItem("Niên khóa", "/nien-khoa", <CalendarOutlined />),
