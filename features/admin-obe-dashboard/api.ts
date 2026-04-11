@@ -16,6 +16,7 @@ export type AdminObeDashboardResponse = {
     noiDung: string;
     avgTiLeDat: number;
     avgDiemHe10: number;
+    passRate: number;
   }>;
   bottleneckCourses: Array<{
     maHocPhan: string;

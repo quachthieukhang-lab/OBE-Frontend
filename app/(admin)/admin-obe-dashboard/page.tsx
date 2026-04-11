@@ -24,6 +24,14 @@ import {
   RadarChart,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  Legend,
 } from "recharts";
 import {
   WarningOutlined,
@@ -72,6 +80,7 @@ type DashboardData = {
     noiDung?: string | null;
     avgTiLeDat: number;
     avgDiemHe10: number;
+    passRate: number;
   }>;
   bottleneckCourses: Array<{
     maHocPhan: string;
@@ -187,6 +196,17 @@ export default function AdminObeDashboardPage() {
     [data, nguongDatCaNhanHe10]
   );
 
+  const ploBarData = useMemo(
+    () =>
+      data?.ploRadar.map((item) => ({
+        label: item.label,
+        passRatePercent: Number((item.passRate * 100).toFixed(1)),
+        avgPercent: Number((item.avgTiLeDat * 100).toFixed(1)),
+        kpiPercent: Number((kpiLopHoc * 100).toFixed(1)),
+      })) ?? [],
+    [data, kpiLopHoc]
+  );
+
   const bottleneckColumns: ColumnsType<DashboardData["bottleneckCourses"][number]> = [
     {
       title: "Học phần",
@@ -298,7 +318,7 @@ export default function AdminObeDashboardPage() {
       >
         <div>
           <Title level={3} style={{ margin: 0 }}>
-            Bảng phân tích OBE
+            Phân tích OBE Toàn diện
           </Title>
           <Text type="secondary">
             Đánh giá chuẩn đầu ra, học phần và mức độ rủi ro sinh viên
@@ -461,6 +481,56 @@ export default function AdminObeDashboardPage() {
         </Col>
 
         <Col xs={24} xl={14}>
+          <Card
+            title={<span style={{ fontWeight: 600 }}>Tỷ lệ đạt chuẩn theo PLO</span>}
+            bordered={false}
+            style={{
+              borderRadius: 12,
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+              height: "100%",
+            }}
+          >
+            {isLoading ? (
+              <Skeleton active />
+            ) : (
+              <div style={{ width: "100%", height: 400 }}>
+                <ResponsiveContainer>
+                  <BarChart data={ploBarData} margin={{ top: 16, right: 16, left: 0, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                    <XAxis dataKey="label" />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={(value: number) => [`${value}%`, "Tỷ lệ đạt"]} />
+                    <Legend />
+                    <ReferenceLine
+                      y={Number((kpiLopHoc * 100).toFixed(1))}
+                      stroke={DANGER_COLOR}
+                      strokeDasharray="6 6"
+                      label={{
+                        value: `KPI ${(kpiLopHoc * 100).toFixed(0)}%`,
+                        position: "insideTopRight",
+                      }}
+                    />
+                    <Bar
+                      dataKey="passRatePercent"
+                      name="% sinh viên đạt ngưỡng cá nhân"
+                      fill={PRIMARY_COLOR}
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Chỉ số này cho biết bao nhiêu % sinh viên có điểm PLO đạt ít nhất{" "}
+                    {nguongDatCaNhanHe10.toFixed(1)}/10.
+                  </Text>
+                </div>
+              </div>
+            )}
+          </Card>
+        </Col>
+
+        <Col xs={24} xl={24}>
           <Card
             title={<span style={{ fontWeight: 600 }}>Cảnh báo "Nút thắt" Học phần</span>}
             bordered={false}
