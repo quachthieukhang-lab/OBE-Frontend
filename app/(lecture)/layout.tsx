@@ -41,35 +41,35 @@ function getItem(
 const MENU: MenuItem[] = [
   getItem("Dashboard", "/dashboard-lecture", <AppstoreOutlined />),
 
-  getItem("Danh mục cơ sở", "sub-master", <ApartmentOutlined />, [
-    getItem("Đơn vị", "/don-vi", <ApartmentOutlined />),
-    getItem("Niên khóa", "/nien-khoa", <CalendarOutlined />),
-    getItem("Giảng viên", "/giang-vien", <TeamOutlined />),
-    getItem("Sinh viên", "/sinh-vien", <UserOutlined />),
-  ]),
+  // getItem("Danh mục cơ sở", "sub-master", <ApartmentOutlined />, [
+  //   getItem("Đơn vị", "/don-vi", <ApartmentOutlined />),
+  //   getItem("Niên khóa", "/nien-khoa", <CalendarOutlined />),
+  //   getItem("Giảng viên", "/giang-vien", <TeamOutlined />),
+  //   getItem("Sinh viên", "/sinh-vien", <UserOutlined />),
+  // ]),
 
-  getItem("Chương trình đào tạo", "sub-curriculum", <ReadOutlined />, [
-    getItem("Chương trình đào tạo", "/chuong-trinh-dao-tao", <ReadOutlined />),
-    getItem("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
-    getItem("Học phần", "/hoc-phan", <BookOutlined />),
-    getItem("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
-    getItem("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
-  ]),
+  // getItem("Chương trình đào tạo", "sub-curriculum", <ReadOutlined />, [
+  //   getItem("Chương trình đào tạo", "/chuong-trinh-dao-tao", <ReadOutlined />),
+  //   getItem("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
+  //   getItem("Học phần", "/hoc-phan", <BookOutlined />),
+  //   getItem("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
+  //   getItem("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
+  // ]),
 
   getItem("Vận hành học vụ", "sub-academic", <ScheduleOutlined />, [
     getItem("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
-    getItem("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
+    // getItem("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
     getItem("Phân công đề cương", "/phan-cong-de-cuong", <FileDoneOutlined />),
-    getItem("Điểm số", "/diem-so", <BarChartOutlined />),
+    getItem("Điểm số phụ trách", "/diem-so-lecture", <BarChartOutlined />),
   ]),
 
-  getItem("Quản lý OBE", "sub-obe", <AimOutlined />, [
-    getItem("PLO", "/plo", <AimOutlined />),
-    getItem("CLO", "/clo", <FlagOutlined />),
-    getItem("CO", "/co", <CheckCircleOutlined />),
-    getItem("Ma trận CLO - PLO", "/clo-plo-matrix", <TableOutlined />),
-    getItem("Ma trận CO - CLO", "/co-clo-matrix", <TableOutlined />),
-    getItem("Ma trận CDG - CO", "/cdg-co-matrix", <TableOutlined />),
+  getItem("Tham khảo OBE", "sub-obe-lecture", <AimOutlined />, [
+    getItem("PLO", "/plo-lecture", <AimOutlined />),
+    getItem("CLO", "/clo-lecture", <FlagOutlined />),
+    getItem("CO", "/co-lecture", <CheckCircleOutlined />),
+    getItem("Ma trận CDG - CO", "/cdg-co-matrix-lecture", <TableOutlined />),
+    getItem("Ma trận CO - CLO", "/co-clo-matrix-lecture", <TableOutlined />),
+    getItem("Ma trận CLO - PLO", "/clo-plo-matrix-lecture", <TableOutlined />),
   ]),
 ];
 
@@ -78,6 +78,7 @@ export default function LectureLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [manualOpenKeys, setManualOpenKeys] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -99,7 +100,7 @@ export default function LectureLayout({ children }: { children: React.ReactNode 
     return hit ? [String(hit.key)] : [];
   }, [pathname, flatMenu]);
 
-  const defaultOpenKeys = useMemo(() => {
+  const routeOpenKeys = useMemo(() => {
     const parent = MENU.find((m: any) =>
       m.children?.some(
         (child: any) => pathname === child.key || pathname.startsWith(`${child.key}/`)
@@ -107,6 +108,10 @@ export default function LectureLayout({ children }: { children: React.ReactNode 
     );
     return parent ? [String((parent as any).key)] : [];
   }, [pathname]);
+
+  useEffect(() => {
+    setManualOpenKeys(routeOpenKeys);
+  }, [routeOpenKeys]);
 
   const onClick: MenuProps["onClick"] = (e) => {
     router.push(e.key);
@@ -139,7 +144,7 @@ export default function LectureLayout({ children }: { children: React.ReactNode 
             letterSpacing: 0.2,
           }}
         >
-          OBE Admin
+          OBE Lecture
         </div>
 
         <Menu
@@ -147,7 +152,8 @@ export default function LectureLayout({ children }: { children: React.ReactNode 
           mode="inline"
           items={MENU}
           selectedKeys={selectedKey}
-          defaultOpenKeys={defaultOpenKeys}
+          openKeys={manualOpenKeys}
+          onOpenChange={(keys) => setManualOpenKeys(keys as string[])}
           onClick={onClick}
         />
       </Sider>

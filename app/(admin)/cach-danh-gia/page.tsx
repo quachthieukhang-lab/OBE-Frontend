@@ -288,9 +288,9 @@ export default function CachDanhGiaPage() {
             <Input placeholder="VD: Thi cuối kỳ" />
           </Form.Item>
 
-          <Space style={{ width: "100%" }} size={12}>
+          <Space style={{ width: "100%"  }} size={12}>
             <Form.Item label="Loại" name="loai" style={{ flex: 1 }}>
-              <Select allowClear options={LOAI_OPTIONS} />
+              <Select allowClear options={LOAI_OPTIONS} style={{ minWidth: 150  }}  />
             </Form.Item>
 
             <Form.Item

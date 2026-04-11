@@ -20,6 +20,7 @@ import {
   FileDoneOutlined,
   BarChartOutlined,
   TableOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -46,6 +47,7 @@ const MENU: MenuItem[] = [
     getItem("Niên khóa", "/nien-khoa", <CalendarOutlined />),
     getItem("Giảng viên", "/giang-vien", <TeamOutlined />),
     getItem("Sinh viên", "/sinh-vien", <UserOutlined />),
+    getItem("Tài khoản", "/tai-khoan", <UserOutlined />),
   ]),
 
   getItem("Chương trình đào tạo", "sub-curriculum", <ReadOutlined />, [
@@ -70,6 +72,7 @@ const MENU: MenuItem[] = [
     getItem("Ma trận CLO - PLO", "/clo-plo-matrix", <TableOutlined />),
     getItem("Ma trận CO - CLO", "/co-clo-matrix", <TableOutlined />),
     getItem("Ma trận CDG - CO", "/cdg-co-matrix", <TableOutlined />),
+    getItem("Cấu hình OBE", "/cau-hinh-obe", <UnorderedListOutlined />),
   ]),
 ];
 
