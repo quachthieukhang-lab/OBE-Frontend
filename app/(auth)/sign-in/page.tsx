@@ -3,11 +3,21 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import {
+  LockOutlined,
+  LoginOutlined,
+  MailOutlined,
+} from "@ant-design/icons";
+import {
+  Button,
+  Divider,
+  Form,
+  Input,
+  Spin,
+  Typography,
+  message,
+} from "antd";
 import { login } from "@/features/auth/api";
-
-const { Title, Text } = Typography;
 
 const DEFAULT_ADMIN_REDIRECT = "/dashboard-admin";
 const DEFAULT_LECTURE_REDIRECT = "/dashboard-lecture";
@@ -18,6 +28,8 @@ function roleToDefaultRedirect(role: string | null | undefined) {
   if (r === "ADMIN") return DEFAULT_ADMIN_REDIRECT;
   return DEFAULT_ADMIN_REDIRECT;
 }
+
+const inputStyle = { borderRadius: 10, height: 48, fontSize: 15 };
 
 function SignInForm() {
   const router = useRouter();
@@ -36,7 +48,9 @@ function SignInForm() {
       if (token) {
         localStorage.setItem("token", token);
       } else {
-        message.warning("Đăng nhập thành công nhưng không nhận được token. Kiểm tra response /auth/sign-in.");
+        message.warning(
+          "Đăng nhập thành công nhưng không nhận được token. Kiểm tra response /auth/sign-in.",
+        );
       }
       message.success("Đăng nhập thành công");
       router.push(redirectTo || roleToDefaultRedirect(role));
@@ -50,54 +64,88 @@ function SignInForm() {
   };
 
   return (
-    <Card
-      variant="borderless"
-      style={{
-        width: "100%",
-        maxWidth: 420,
-        borderRadius: 12,
-        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
-      }}
-    >
-      <div style={{ marginBottom: 24, textAlign: "center" }}>
-        <Title level={3} style={{ marginBottom: 8 }}>
+    <div style={{ width: "100%", maxWidth: 400 }}>
+      <div style={{ marginBottom: 36 }}>
+        <Typography.Title
+          level={2}
+          style={{ marginBottom: 8, fontWeight: 700, letterSpacing: "-0.02em" }}
+        >
           Đăng nhập
-        </Title>
-        <Text type="secondary">Hệ thống OBE</Text>
+        </Typography.Title>
+        <Typography.Text type="secondary" style={{ fontSize: 15 }}>
+          Chào mừng trở lại. Đăng nhập để tiếp tục làm việc.
+        </Typography.Text>
       </div>
 
-      <Form layout="vertical" requiredMark={false} onFinish={onFinish} size="large">
+      <Form
+        layout="vertical"
+        requiredMark={false}
+        onFinish={onFinish}
+        size="large"
+      >
         <Form.Item
           name="email"
-          label="Email"
+          label={<span style={{ fontWeight: 500 }}>Email</span>}
           rules={[
             { required: true, message: "Nhập email" },
             { type: "email", message: "Email không hợp lệ" },
           ]}
         >
-          <Input prefix={<UserOutlined />} placeholder="you@example.com" autoComplete="email" />
+          <Input
+            prefix={<MailOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={inputStyle}
+          />
         </Form.Item>
 
         <Form.Item
           name="password"
-          label="Mật khẩu"
+          label={<span style={{ fontWeight: 500 }}>Mật khẩu</span>}
           rules={[{ required: true, message: "Nhập mật khẩu" }]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="••••••••" autoComplete="current-password" />
+          <Input.Password
+            prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            style={inputStyle}
+          />
         </Form.Item>
 
-        <Form.Item style={{ marginBottom: 12 }}>
-          <Button type="primary" htmlType="submit" block loading={loading}>
+        <Form.Item style={{ marginBottom: 8, marginTop: 4 }}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            loading={loading}
+            icon={<LoginOutlined />}
+            style={{
+              height: 48,
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 15,
+              border: "none",
+              background:
+                "linear-gradient(135deg, #1677ff 0%, #4338ca 55%, #6d28d9 100%)",
+              boxShadow: "0 8px 20px rgba(37, 99, 235, 0.35)",
+            }}
+          >
             Đăng nhập
           </Button>
         </Form.Item>
       </Form>
 
+      <Divider plain style={{ margin: "20px 0", color: "#bbb" }}>
+        hoặc
+      </Divider>
+
       <div style={{ textAlign: "center" }}>
-        <Text type="secondary">Chưa có tài khoản? </Text>
-        <Link href="/sign-up">Đăng ký</Link>
+        <Typography.Text type="secondary">Chưa có tài khoản? </Typography.Text>
+        <Link href="/sign-up" style={{ fontWeight: 600 }}>
+          Đăng ký
+        </Link>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -105,9 +153,9 @@ export default function SignInPage() {
   return (
     <Suspense
       fallback={
-        <Card style={{ width: "100%", maxWidth: 420, borderRadius: 12 }}>
-          <Typography.Paragraph>Đang tải...</Typography.Paragraph>
-        </Card>
+        <div style={{ padding: 64 }}>
+          <Spin size="large" />
+        </div>
       }
     >
       <SignInForm />

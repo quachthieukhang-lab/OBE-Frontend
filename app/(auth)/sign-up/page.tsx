@@ -3,22 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Typography, message } from "antd";
+import {
+  LockOutlined,
+  MailOutlined,
+  UserOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons";
+import { Button, Divider, Form, Input, Typography, message } from "antd";
 import { register } from "@/features/auth/api";
 
-const { Title, Text } = Typography;
+const inputStyle = { borderRadius: 10, height: 48, fontSize: 15 };
+
+function roleToDefaultRedirect(role: string | null | undefined) {
+  const r = (role ?? "").toUpperCase();
+  if (r === "LECTURE" || r === "LECTURER") return "/dashboard-lecture";
+  if (r === "ADMIN") return "/dashboard-admin";
+  return "/dashboard-admin";
+}
 
 export default function SignUpPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-
-  const roleToDefaultRedirect = (role: string | null | undefined) => {
-    const r = (role ?? "").toUpperCase();
-    if (r === "LECTURE" || r === "LECTURER") return "/dashboard-lecture";
-    if (r === "ADMIN") return "/dashboard-admin";
-    return "/dashboard-admin";
-  };
 
   const onFinish = async (values: {
     hoTen: string;
@@ -51,57 +56,74 @@ export default function SignUpPage() {
   };
 
   return (
-    <Card
-      variant="borderless"
-      style={{
-        width: "100%",
-        maxWidth: 420,
-        borderRadius: 12,
-        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
-      }}
-    >
-      <div style={{ marginBottom: 24, textAlign: "center" }}>
-        <Title level={3} style={{ marginBottom: 8 }}>
-          Đăng ký
-        </Title>
-        <Text type="secondary">Tạo tài khoản OBE</Text>
+    <div style={{ width: "100%", maxWidth: 400 }}>
+      <div style={{ marginBottom: 36 }}>
+        <Typography.Title
+          level={2}
+          style={{ marginBottom: 8, fontWeight: 700, letterSpacing: "-0.02em" }}
+        >
+          Tạo tài khoản
+        </Typography.Title>
+        <Typography.Text type="secondary" style={{ fontSize: 15 }}>
+          Đăng ký để sử dụng hệ thống OBE.
+        </Typography.Text>
       </div>
 
-      <Form layout="vertical" requiredMark={false} onFinish={onFinish} size="large">
+      <Form
+        layout="vertical"
+        requiredMark={false}
+        onFinish={onFinish}
+        size="large"
+      >
         <Form.Item
           name="hoTen"
-          label="Họ và tên"
+          label={<span style={{ fontWeight: 500 }}>Họ và tên</span>}
           rules={[{ required: true, message: "Nhập họ tên" }]}
         >
-          <Input prefix={<UserOutlined />} placeholder="Nguyễn Văn A" autoComplete="name" />
+          <Input
+            prefix={<UserOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="Nguyễn Văn A"
+            autoComplete="name"
+            style={inputStyle}
+          />
         </Form.Item>
 
         <Form.Item
           name="email"
-          label="Email"
+          label={<span style={{ fontWeight: 500 }}>Email</span>}
           rules={[
             { required: true, message: "Nhập email" },
             { type: "email", message: "Email không hợp lệ" },
           ]}
         >
-          <Input prefix={<MailOutlined />} placeholder="you@example.com" autoComplete="email" />
+          <Input
+            prefix={<MailOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={inputStyle}
+          />
         </Form.Item>
 
         <Form.Item
           name="password"
-          label="Mật khẩu"
+          label={<span style={{ fontWeight: 500 }}>Mật khẩu</span>}
           rules={[
             { required: true, message: "Nhập mật khẩu" },
             { min: 6, message: "Tối thiểu 6 ký tự" },
           ]}
           hasFeedback
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="••••••••" autoComplete="new-password" />
+          <Input.Password
+            prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            style={inputStyle}
+          />
         </Form.Item>
 
         <Form.Item
           name="confirm"
-          label="Xác nhận mật khẩu"
+          label={<span style={{ fontWeight: 500 }}>Xác nhận mật khẩu</span>}
           dependencies={["password"]}
           hasFeedback
           rules={[
@@ -111,25 +133,54 @@ export default function SignUpPage() {
                 if (!value || getFieldValue("password") === value) {
                   return Promise.resolve();
                 }
-                return Promise.reject(new Error("Mật khẩu xác nhận không khớp"));
+                return Promise.reject(
+                  new Error("Mật khẩu xác nhận không khớp"),
+                );
               },
             }),
           ]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="••••••••" autoComplete="new-password" />
+          <Input.Password
+            prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            style={inputStyle}
+          />
         </Form.Item>
 
-        <Form.Item style={{ marginBottom: 12 }}>
-          <Button type="primary" htmlType="submit" block loading={loading}>
+        <Form.Item style={{ marginBottom: 8, marginTop: 4 }}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            loading={loading}
+            icon={<UserAddOutlined />}
+            style={{
+              height: 48,
+              borderRadius: 10,
+              fontWeight: 600,
+              fontSize: 15,
+              border: "none",
+              background:
+                "linear-gradient(135deg, #1677ff 0%, #4338ca 55%, #6d28d9 100%)",
+              boxShadow: "0 8px 20px rgba(37, 99, 235, 0.35)",
+            }}
+          >
             Đăng ký
           </Button>
         </Form.Item>
       </Form>
 
+      <Divider plain style={{ margin: "20px 0", color: "#bbb" }}>
+        hoặc
+      </Divider>
+
       <div style={{ textAlign: "center" }}>
-        <Text type="secondary">Đã có tài khoản? </Text>
-        <Link href="/sign-in">Đăng nhập</Link>
+        <Typography.Text type="secondary">Đã có tài khoản? </Typography.Text>
+        <Link href="/sign-in" style={{ fontWeight: 600 }}>
+          Đăng nhập
+        </Link>
       </div>
-    </Card>
+    </div>
   );
 }
