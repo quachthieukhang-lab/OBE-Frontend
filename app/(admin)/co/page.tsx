@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import type { CO, HocPhan } from "@/features/co/types";
-import { createCo, deleteCo, listCo, listHocPhan, updateCo } from "@/features/co/api";
+import type { CO, DeCuongChiTiet, HocPhan } from "@/features/co/types";
+import { createCo, deleteCo, listCo, listDeCuong, listHocPhan, updateCo } from "@/features/co/api";
 
 type Mode = "create" | "edit";
 
@@ -15,6 +15,7 @@ export default function CoPage() {
   const [form] = Form.useForm<any>();
 
   const [maHocPhan, setMaHocPhan] = useState<string | undefined>();
+  const [maDeCuong, setMaDeCuong] = useState<string | undefined>();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
@@ -34,12 +35,34 @@ export default function CoPage() {
     [hocPhans]
   );
 
-  const coQueryKey = useMemo(() => ["co", { maHocPhan }], [maHocPhan]);
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
+    enabled: !!maHocPhan,
+  });
+
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const coQueryKey = useMemo(() => ["co", { maDeCuong }], [maDeCuong]);
 
   const { data: rowsRaw = [], isLoading } = useQuery({
     queryKey: coQueryKey,
-    enabled: !!maHocPhan,
-    queryFn: () => listCo(maHocPhan!),
+    enabled: !!maDeCuong,
+    queryFn: () => listCo(maDeCuong!),
   });
 
   const rows = useMemo(() => {
@@ -49,7 +72,7 @@ export default function CoPage() {
   }, [rowsRaw, q]);
 
   const createMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; data: any }) => createCo(payload.maHocPhan, payload.data),
+    mutationFn: async (payload: { maDeCuong: string; data: any }) => createCo(payload.maDeCuong, payload.data),
     onSuccess: async () => {
       message.success("Tạo CO thành công");
       setOpen(false);
@@ -60,8 +83,8 @@ export default function CoPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; maCO: string; data: Partial<CO> }) =>
-      updateCo(payload.maHocPhan, payload.maCO, payload.data),
+    mutationFn: async (payload: { maDeCuong: string; maCO: string; data: Partial<CO> }) =>
+      updateCo(payload.maDeCuong, payload.maCO, payload.data),
     onSuccess: async () => {
       message.success("Cập nhật thành công");
       setOpen(false);
@@ -72,7 +95,7 @@ export default function CoPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; maCO: string }) => deleteCo(payload.maHocPhan, payload.maCO),
+    mutationFn: async (payload: { maDeCuong: string; maCO: string }) => deleteCo(payload.maDeCuong, payload.maCO),
     onSuccess: async () => {
       message.success("Đã xóa");
       await qc.invalidateQueries({ queryKey: ["co"] });
@@ -104,7 +127,7 @@ export default function CoPage() {
             title="Xóa CO?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() => deleteMut.mutate({ maHocPhan: maHocPhan!, maCO: row.maCO })}
+            onConfirm={() => deleteMut.mutate({ maDeCuong: maDeCuong!, maCO: row.maCO })}
           >
             <Button danger loading={deleteMut.isPending}>
               Xóa
@@ -116,7 +139,7 @@ export default function CoPage() {
   ];
 
   const openCreate = () => {
-    if (!maHocPhan) return;
+    if (!maDeCuong) return;
     setMode("create");
     setEditing(null);
     form.resetFields();
@@ -124,7 +147,7 @@ export default function CoPage() {
   };
 
   const onSubmit = async () => {
-    if (!maHocPhan) return;
+    if (!maDeCuong) return;
 
     const v = await form.validateFields();
     const data: Partial<CO> = {
@@ -133,12 +156,12 @@ export default function CoPage() {
     };
 
     if (mode === "create") {
-      createMut.mutate({ maHocPhan, data });
+      createMut.mutate({ maDeCuong, data });
       return;
     }
 
     if (!editing) return;
-    updateMut.mutate({ maHocPhan, maCO: editing.maCO, data });
+    updateMut.mutate({ maDeCuong, maCO: editing.maCO, data });
   };
 
   return (
@@ -152,8 +175,23 @@ export default function CoPage() {
             value={maHocPhan}
             onChange={(v) => {
               setMaHocPhan(v);
+              setMaDeCuong(undefined);
               setQ("");
             }}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 280 }}
+            placeholder="Chọn đề cương"
+            options={dcOptions}
+            value={maDeCuong}
+            onChange={(v) => {
+              setMaDeCuong(v);
+              setQ("");
+            }}
+            disabled={!maHocPhan || deCuongs.length === 0}
             showSearch
             optionFilterProp="label"
           />
@@ -163,20 +201,20 @@ export default function CoPage() {
             allowClear
             onSearch={setQ}
             style={{ width: 280 }}
-            disabled={!maHocPhan}
+            disabled={!maDeCuong}
           />
         </Space>
 
-        <Button type="primary" onClick={openCreate} disabled={!maHocPhan}>
+        <Button type="primary" onClick={openCreate} disabled={!maDeCuong}>
           Tạo CO
         </Button>
       </Space>
 
       <Table
         rowKey="maCO"
-        loading={isLoading && !!maHocPhan}
+        loading={isLoading && !!maDeCuong}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         pagination={{ pageSize: 10 }}
       />
 

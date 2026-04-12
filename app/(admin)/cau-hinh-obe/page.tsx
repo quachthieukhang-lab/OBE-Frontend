@@ -153,7 +153,7 @@ export default function CauHinhObePage() {
       render: (v) => {
         const percent = (Number(v) * 100).toFixed(2);
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text>{v}</Text>
             <Text type="secondary">{percent}%</Text>
           </Space>
@@ -167,7 +167,7 @@ export default function CauHinhObePage() {
       render: (v) => {
         const percent = (Number(v) * 100).toFixed(2);
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text>{v}</Text>
             <Text type="secondary">{percent}%</Text>
           </Space>

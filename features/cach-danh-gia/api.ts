@@ -1,36 +1,43 @@
 import { http } from "@/lib/api/http";
-import type { CachDanhGia, HocPhan } from "./types";
+import type { CachDanhGia, DeCuongChiTiet, HocPhan } from "./types";
 
 export async function listHocPhan() {
   const res = await http.get<HocPhan[]>("/hoc-phan");
   return res.data;
 }
 
-export async function listCachDanhGia(maHocPhan: string) {
-  const res = await http.get<CachDanhGia[]>(`/hoc-phan/${maHocPhan}/cach-danh-gia`);
+export async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
+  return res.data;
+}
+
+export async function listCachDanhGia(maDeCuong: string) {
+  const res = await http.get<CachDanhGia[]>(`/de-cuong-chi-tiet/${maDeCuong}/cach-danh-gia`);
   return res.data;
 }
 
 export async function createCachDanhGia(
-  maHocPhan: string,
-  payload: Omit<CachDanhGia, "maCDG" | "maHocPhan">
+  maDeCuong: string,
+  payload: Omit<CachDanhGia, "maCDG" | "maDeCuong">
 ) {
-  const res = await http.post<CachDanhGia>(`/hoc-phan/${maHocPhan}/cach-danh-gia`, payload);
+  const res = await http.post<CachDanhGia>(`/de-cuong-chi-tiet/${maDeCuong}/cach-danh-gia`, payload);
   return res.data;
 }
 
 export async function updateCachDanhGia(
-  maHocPhan: string,
+  maDeCuong: string,
   maCDG: string,
   payload: Partial<CachDanhGia>
 ) {
   const res = await http.patch<CachDanhGia>(
-    `/hoc-phan/${maHocPhan}/cach-danh-gia/${maCDG}`,
+    `/de-cuong-chi-tiet/${maDeCuong}/cach-danh-gia/${maCDG}`,
     payload
   );
   return res.data;
 }
 
-export async function deleteCachDanhGia(maHocPhan: string, maCDG: string) {
-  await http.delete(`/hoc-phan/${maHocPhan}/cach-danh-gia/${maCDG}`);
+export async function deleteCachDanhGia(maDeCuong: string, maCDG: string) {
+  await http.delete(`/de-cuong-chi-tiet/${maDeCuong}/cach-danh-gia/${maCDG}`);
 }

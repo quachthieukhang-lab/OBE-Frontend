@@ -2,10 +2,19 @@ export type GiangVien = { MSGV: string; hoTen: string };
 export type HocPhan = { maHocPhan: string; tenHocPhan: string };
 export type NienKhoa = { khoa: number; namBatDau: number; namKetThuc?: number | null };
 
+export type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
+};
+
 export type LopHocPhan = {
   maLopHocPhan: string;
   MSGV: string;
   maHocPhan: string;
+  maDeCuong?: string | null;
   khoa: number;
   hocKy: number;
 

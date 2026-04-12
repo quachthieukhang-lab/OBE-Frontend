@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Button,
@@ -19,6 +19,8 @@ import type { ColumnsType } from "antd/es/table";
 
 import type { ChuongTrinhDaoTao, PLO } from "@/features/plo/types";
 import { createPlo, deletePlo, listPlo, listPrograms, updatePlo } from "@/features/plo/api";
+import { listProgramCohorts } from "@/features/chuong-trinh-nien-khoa/api";
+import type { ChuongTrinhNienKhoa } from "@/features/chuong-trinh-nien-khoa/types";
 
 type Mode = "create" | "edit";
 
@@ -28,6 +30,7 @@ export default function PloPage() {
 
     // chọn CTĐT trước
     const [program, setProgram] = useState<string | undefined>();
+    const [khoa, setKhoa] = useState<number | undefined>();
     const [q, setQ] = useState("");
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<Mode>("create");
@@ -47,12 +50,37 @@ export default function PloPage() {
         [programs]
     );
 
-    const ploQueryKey = useMemo(() => ["plo", { program }], [program]);
+    const { data: cohorts = [] } = useQuery({
+        queryKey: ["chuong-trinh-nien-khoa", program],
+        queryFn: () => listProgramCohorts(program!),
+        enabled: !!program,
+    });
+
+    const cohortOptions = useMemo(
+        () =>
+            cohorts.map((c: ChuongTrinhNienKhoa) => ({
+                label: `K${c.khoa}${c.phienBan ? ` — ${c.phienBan}` : ""}`,
+                value: c.khoa,
+            })),
+        [cohorts]
+    );
+
+    useEffect(() => {
+        if (!program) {
+            setKhoa(undefined);
+            return;
+        }
+        if (cohorts.length === 1) {
+            setKhoa(cohorts[0].khoa);
+        }
+    }, [program, cohorts]);
+
+    const ploQueryKey = useMemo(() => ["plo", { program, khoa }], [program, khoa]);
 
     const { data: rowsRaw = [], isLoading } = useQuery({
         queryKey: ploQueryKey,
-        enabled: !!program,
-        queryFn: () => listPlo(program!),
+        enabled: !!program && khoa != null,
+        queryFn: () => listPlo(program!, khoa!),
     });
 
     const rows = useMemo(() => {
@@ -68,7 +96,8 @@ export default function PloPage() {
     }, [rowsRaw, q]);
 
     const createMut = useMutation({
-        mutationFn: async (payload: { maSoNganh: string; data: any }) => createPlo(payload.maSoNganh, payload.data),
+        mutationFn: async (payload: { maSoNganh: string; khoa: number; data: any }) =>
+            createPlo(payload.maSoNganh, payload.khoa, payload.data),
         onSuccess: async () => {
             message.success("Tạo PLO thành công");
             setOpen(false);
@@ -79,8 +108,8 @@ export default function PloPage() {
     });
 
     const updateMut = useMutation({
-        mutationFn: async (payload: { maSoNganh: string; maPLO: string; data: Partial<PLO> }) =>
-            updatePlo(payload.maSoNganh, payload.maPLO, payload.data),
+        mutationFn: async (payload: { maSoNganh: string; khoa: number; maPLO: string; data: Partial<PLO> }) =>
+            updatePlo(payload.maSoNganh, payload.khoa, payload.maPLO, payload.data),
         onSuccess: async () => {
             message.success("Cập nhật thành công");
             setOpen(false);
@@ -91,7 +120,8 @@ export default function PloPage() {
     });
 
     const deleteMut = useMutation({
-        mutationFn: async (payload: { maSoNganh: string; maPLO: string }) => deletePlo(payload.maSoNganh, payload.maPLO),
+        mutationFn: async (payload: { maSoNganh: string; khoa: number; maPLO: string }) =>
+            deletePlo(payload.maSoNganh, payload.khoa, payload.maPLO),
         onSuccess: async () => {
             message.success("Đã xóa");
             await qc.invalidateQueries({ queryKey: ["plo"] });
@@ -100,6 +130,12 @@ export default function PloPage() {
     });
 
     const columns: ColumnsType<PLO> = [
+        {
+            title: "Khóa",
+            dataIndex: "khoa",
+            width: 90,
+            render: (v) => (v != null ? <Tag>K{v}</Tag> : "-"),
+        },
         { title: "Code", dataIndex: "code", width: 110, render: (v) => v ?? "-" },
         { title: "Nội dung chuẩn đầu ra", dataIndex: "noiDungChuanDauRa", ellipsis: true, width: 600 },
         { title: "Nhóm", dataIndex: "nhom", width: 120, render: (v) => v ?? "-" },
@@ -133,7 +169,10 @@ export default function PloPage() {
                         title="Xóa PLO?"
                         okText="Xóa"
                         cancelText="Hủy"
-                        onConfirm={() => deleteMut.mutate({ maSoNganh: program!, maPLO: row.maPLO })}
+                        onConfirm={() => {
+                            if (khoa == null) return;
+                            deleteMut.mutate({ maSoNganh: program!, khoa, maPLO: row.maPLO });
+                        }}
                     >
                         <Button danger loading={deleteMut.isPending}>
                             Xóa
@@ -145,7 +184,7 @@ export default function PloPage() {
     ];
 
     const openCreate = () => {
-        if (!program) return;
+        if (!program || khoa == null) return;
         setMode("create");
         setEditing(null);
         form.resetFields();
@@ -167,12 +206,13 @@ export default function PloPage() {
         };
 
         if (mode === "create") {
-            createMut.mutate({ maSoNganh: program, data });
+            if (khoa == null) return;
+            createMut.mutate({ maSoNganh: program, khoa, data });
             return;
         }
 
-        if (!editing) return;
-        updateMut.mutate({ maSoNganh: program, maPLO: editing.maPLO, data });
+        if (!editing || khoa == null) return;
+        updateMut.mutate({ maSoNganh: program, khoa, maPLO: editing.maPLO, data });
     };
 
     return (
@@ -186,8 +226,21 @@ export default function PloPage() {
                         value={program}
                         onChange={(v) => {
                             setProgram(v);
+                            setKhoa(undefined);
                             setQ("");
                         }}
+                        showSearch
+                        optionFilterProp="label"
+                    />
+
+                    <Select
+                        style={{ width: 220 }}
+                        placeholder="Niên khóa (K)"
+                        options={cohortOptions}
+                        value={khoa}
+                        onChange={(v) => setKhoa(v ?? undefined)}
+                        disabled={!program}
+                        allowClear={cohorts.length > 1}
                         showSearch
                         optionFilterProp="label"
                     />
@@ -197,20 +250,20 @@ export default function PloPage() {
                         allowClear
                         onSearch={setQ}
                         style={{ width: 280 }}
-                        disabled={!program}
+                        disabled={!program || khoa == null}
                     />
                 </Space>
 
-                <Button type="primary" onClick={openCreate} disabled={!program}>
+                <Button type="primary" onClick={openCreate} disabled={!program || khoa == null}>
                     Tạo PLO
                 </Button>
             </Space>
 
             <Table
                 rowKey="maPLO"
-                loading={isLoading && !!program}
+                loading={isLoading && !!program && khoa != null}
                 columns={columns}
-                dataSource={program ? rows : []}
+                dataSource={program && khoa != null ? rows : []}
                 pagination={{ pageSize: 10 }}
             />
 

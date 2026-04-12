@@ -1,5 +1,5 @@
 import { http } from "@/lib/api/http";
-import type { HocPhan, DonVi } from "./types";
+import type { HocPhan, DonVi, PloOption } from "./types";
 
 export async function listHocPhan(params: { q?: string } = {}) {
   const res = await http.get<HocPhan[]>("/hoc-phan", { params });
@@ -22,5 +22,21 @@ export async function deleteHocPhan(maHocPhan: string) {
 
 export async function listDonVi() {
   const res = await http.get<DonVi[]>("/don-vi");
+  return res.data;
+}
+
+export async function getHocPhan(maHocPhan: string) {
+  const res = await http.get<HocPhan>(`/hoc-phan/${maHocPhan}`);
+  return res.data;
+}
+
+export async function listPloOptions(
+  maHocPhan: string,
+  params: { maSoNganh?: string; khoa?: string } = {}
+) {
+  const res = await http.get<PloOption[]>(
+    `/hoc-phan/${maHocPhan}/plo-options`,
+    { params }
+  );
   return res.data;
 }

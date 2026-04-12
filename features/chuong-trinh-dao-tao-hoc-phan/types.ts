@@ -16,4 +16,6 @@ export type ChuongTrinhDaoTaoHocPhan = {
   batBuoc: boolean;
   nhomTuChon?: string | null;
   ghiChu?: string | null;
+  /** Một số endpoint chi tiết trả về quan hệ thay cho `chuongTrinh` cũ */
+  ctdtNienKhoa?: unknown;
 };

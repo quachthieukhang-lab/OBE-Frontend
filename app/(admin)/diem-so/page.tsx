@@ -31,6 +31,7 @@ import {
     deleteDiemSo,
     listCachDanhGia,
     listDangKy,
+    listDeCuong,
     listDiemSo,
     listGiangVien,
     listLopHocPhan,
@@ -102,10 +103,23 @@ export default function DiemSoPage() {
         queryFn: () => listDangKy(selectedClass!),
     });
 
+    const resolvedMaDeCuong = selectedClassData?.maDeCuong;
+    const { data: deCuongs = [] } = useQuery({
+        queryKey: ["de-cuong-chi-tiet", { maHocPhan: selectedClassData?.maHocPhan }],
+        queryFn: () => listDeCuong(selectedClassData!.maHocPhan),
+        enabled: !!selectedClassData?.maHocPhan && !resolvedMaDeCuong,
+    });
+
+    const maDeCuong = useMemo(() => {
+        if (resolvedMaDeCuong) return resolvedMaDeCuong;
+        const active = deCuongs.find((dc) => dc.trangThai === "active");
+        return active?.maDeCuong ?? deCuongs[0]?.maDeCuong;
+    }, [resolvedMaDeCuong, deCuongs]);
+
     const { data: cdgs = [], isLoading: cdgLoading } = useQuery({
-        queryKey: ["cach-danh-gia", { maHocPhan: selectedClassData?.maHocPhan }],
-        enabled: !!selectedClassData?.maHocPhan,
-        queryFn: () => listCachDanhGia(selectedClassData!.maHocPhan),
+        queryKey: ["cach-danh-gia", { maDeCuong }],
+        enabled: !!maDeCuong,
+        queryFn: () => listCachDanhGia(maDeCuong!),
     });
 
     // load điểm cho từng enrollment

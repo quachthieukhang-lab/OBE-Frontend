@@ -16,6 +16,7 @@ export type GiangVien = {
 export type BanPhanCongNhapDeCuong = {
   maBanPhanCong: string;
   maSoNganh: string;
+  khoa: number;
   maHocPhan: string;
   MSGV: string;
 
@@ -24,4 +25,6 @@ export type BanPhanCongNhapDeCuong = {
   deadline?: string | null;   // YYYY-MM-DD
   ghiChu?: string | null;
   assignedAt?: string | null; // ISO datetime
+  /** Response mới thay cho `chuongTrinh` */
+  ctdtNienKhoa?: unknown;
 };

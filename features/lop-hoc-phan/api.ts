@@ -1,5 +1,5 @@
 import { http } from "@/lib/api/http";
-import type { GiangVien, HocPhan, NienKhoa, LopHocPhan } from "./types";
+import type { DeCuongChiTiet, GiangVien, HocPhan, NienKhoa, LopHocPhan } from "./types";
 
 export async function listLopHocPhan(params: { q?: string } = {}) {
   const res = await http.get<LopHocPhan[]>("/lop-hoc-phan", { params });
@@ -33,5 +33,12 @@ export async function listHocPhan() {
 
 export async function listNienKhoa() {
   const res = await http.get<NienKhoa[]>("/nien-khoa");
+  return res.data;
+}
+
+export async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
   return res.data;
 }

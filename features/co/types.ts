@@ -3,9 +3,17 @@ export type HocPhan = {
   tenHocPhan: string;
 };
 
+export type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
+};
+
 export type CO = {
   maCO: string; // uuid
-  maHocPhan: string;
+  maDeCuong: string;
 
   noiDungChuanDauRa: string;
   code?: string | null; // CO1...

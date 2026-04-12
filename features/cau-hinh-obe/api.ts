@@ -32,3 +32,11 @@ export async function updateCauHinhObe(
 export async function deleteCauHinhObe(id: string) {
   await http.delete(`/cau-hinh-obe/${id}`);
 }
+
+/** GET /cau-hinh-obe/by-khoa/:khoa/don-vi/:maDonVi */
+export async function getCauHinhObeByKhoaAndDonVi(khoa: number, maDonVi: string) {
+  const res = await http.get<CauHinhObe>(
+    `/cau-hinh-obe/by-khoa/${khoa}/don-vi/${encodeURIComponent(maDonVi)}`
+  );
+  return res.data;
+}

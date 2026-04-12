@@ -11,9 +11,17 @@ type HocPhan = {
   tenHocPhan: string;
 };
 
+type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
+};
+
 type CachDanhGia = {
   maCDG: string;
-  maHocPhan: string;
+  maDeCuong: string;
   tenThanhPhan: string;
   cachDanhGia?: string | null;
   trongSo: string;
@@ -22,7 +30,7 @@ type CachDanhGia = {
 
 type CO = {
   maCO: string;
-  maHocPhan: string;
+  maDeCuong: string;
   code?: string | null;
   noiDungChuanDauRa: string;
 };
@@ -35,7 +43,7 @@ type CdgCoMapping = {
 };
 
 type CdgCoMatrixResponse = {
-  cdgs: CachDanhGia[];
+  cachDanhGias: CachDanhGia[];
   cos: CO[];
   mappings: CdgCoMapping[];
 };
@@ -54,9 +62,16 @@ async function listHocPhan() {
   return res.data;
 }
 
-async function listCdgCoMatrix(maHocPhan: string) {
+async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
+  return res.data;
+}
+
+async function listCdgCoMatrix(maDeCuong: string) {
   const res = await http.get<CdgCoMatrixResponse>(
-    `/hoc-phan/${maHocPhan}/cdg-co-mapping`
+    `/de-cuong-chi-tiet/${maDeCuong}/cdg-co-mapping`
   );
   return res.data;
 }
@@ -67,6 +82,7 @@ function buildCellKey(maCDG: string, maCO: string) {
 
 export default function CdgCoMatrixPage() {
   const [maHocPhan, setMaHocPhan] = useState<string>();
+  const [maDeCuong, setMaDeCuong] = useState<string>();
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
   const { data: hocPhans = [] } = useQuery({
@@ -74,18 +90,40 @@ export default function CdgCoMatrixPage() {
     queryFn: listHocPhan,
   });
 
-  const { data: matrixData, isLoading } = useQuery({
-    queryKey: ["cdg-co-mapping", maHocPhan],
-    queryFn: () => listCdgCoMatrix(maHocPhan!),
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
     enabled: !!maHocPhan,
   });
 
-  const cdgs = matrixData?.cdgs ?? [];
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const { data: matrixData, isLoading } = useQuery({
+    queryKey: ["cdg-co-mapping", maDeCuong],
+    queryFn: () => listCdgCoMatrix(maDeCuong!),
+    enabled: !!maDeCuong,
+  });
+
+  const cdgs = matrixData?.cachDanhGias ?? [];
   const cos = matrixData?.cos ?? [];
 
   const initializedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!maHocPhan) {
+    if (!maDeCuong) {
       setDraftValues({});
       initializedKeyRef.current = null;
       return;
@@ -112,7 +150,7 @@ export default function CdgCoMatrixPage() {
 
     initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, matrixData]);
+  }, [maDeCuong, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return cdgs.map((cdg) => {
@@ -186,7 +224,6 @@ export default function CdgCoMatrixPage() {
         const raw = draftValues[key];
         const current = raw != null && raw !== "" ? Number(raw) : null;
 
-        // Đã thay thế InputNumber bằng text tĩnh, giữ nguyên width để không vỡ layout
         return (
           <div style={{ width: 100, fontWeight: current ? 500 : 400, color: current ? '#000' : '#bfbfbf' }}>
             {current !== null ? current : "-"}
@@ -214,18 +251,32 @@ export default function CdgCoMatrixPage() {
           onChange={(value) => {
             initializedKeyRef.current = null;
             setMaHocPhan(value);
+            setMaDeCuong(undefined);
           }}
           showSearch
           optionFilterProp="label"
         />
-        {/* Đã xóa nút LƯU ở đây */}
+
+        <Select
+          style={{ width: 280 }}
+          placeholder="Chọn đề cương"
+          options={dcOptions}
+          value={maDeCuong}
+          onChange={(v) => {
+            initializedKeyRef.current = null;
+            setMaDeCuong(v);
+          }}
+          disabled={!maHocPhan || deCuongs.length === 0}
+          showSearch
+          optionFilterProp="label"
+        />
       </Space>
 
       <Table
         rowKey="key"
         loading={isLoading}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         scroll={{ x: 1400 }}
         pagination={false}
         bordered
@@ -240,7 +291,6 @@ export default function CdgCoMatrixPage() {
               const total = getColumnTotal(co.maCO);
               const isValid = total === 0 || total === 1;
 
-              // Giữ nguyên logic báo Đỏ nếu tổng cột sai
               return (
                 <Table.Summary.Cell key={co.maCO} index={idx + 3}>
                   <Tag color={isValid ? "green" : "red"}>{total}</Tag>

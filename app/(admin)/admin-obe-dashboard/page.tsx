@@ -149,7 +149,7 @@ function KpiCard({
                     <Statistic
                         value={value}
                         suffix={suffix}
-                        valueStyle={{ fontSize: 22, fontWeight: 600 }}
+                        styles={{ content: { fontSize: 22, fontWeight: 600 } }}
                     />
                 </div>
             </div>
@@ -214,7 +214,7 @@ export default function AdminObeDashboardPage() {
             title: "Học phần",
             key: "hocPhan",
             render: (_, r) => (
-                <Space direction="vertical" size={0}>
+                <Space orientation="vertical" size={0}>
                     <Text strong>{r.tenHocPhan}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         {r.maHocPhan}

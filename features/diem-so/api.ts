@@ -2,6 +2,7 @@ import { http } from "@/lib/api/http";
 import type {
   CachDanhGia,
   DangKyHocPhan,
+  DeCuongChiTiet,
   DiemSo,
   GiangVien,
   LopHocPhan,
@@ -18,8 +19,15 @@ export async function listDangKy(maLopHocPhan: string) {
   return res.data;
 }
 
-export async function listCachDanhGia(maHocPhan: string) {
-  const res = await http.get<CachDanhGia[]>(`/hoc-phan/${maHocPhan}/cach-danh-gia`);
+export async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
+  return res.data;
+}
+
+export async function listCachDanhGia(maDeCuong: string) {
+  const res = await http.get<CachDanhGia[]>(`/de-cuong-chi-tiet/${maDeCuong}/cach-danh-gia`);
   return res.data;
 }
 

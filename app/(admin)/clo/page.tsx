@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import type { CLO, HocPhan } from "@/features/clo/types";
-import { createClo, deleteClo, listClo, listHocPhan, updateClo } from "@/features/clo/api";
+import type { CLO, DeCuongChiTiet, HocPhan } from "@/features/clo/types";
+import { createClo, deleteClo, listClo, listDeCuong, listHocPhan, updateClo } from "@/features/clo/api";
 
 type Mode = "create" | "edit";
 
@@ -15,6 +15,7 @@ export default function CloPage() {
   const [form] = Form.useForm<any>();
 
   const [maHocPhan, setMaHocPhan] = useState<string | undefined>();
+  const [maDeCuong, setMaDeCuong] = useState<string | undefined>();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
@@ -34,12 +35,35 @@ export default function CloPage() {
     [hocPhans]
   );
 
-  const cloQueryKey = useMemo(() => ["clo", { maHocPhan }], [maHocPhan]);
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
+    enabled: !!maHocPhan,
+  });
+
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  // Auto-select active version when đề cương list changes
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const cloQueryKey = useMemo(() => ["clo", { maDeCuong }], [maDeCuong]);
 
   const { data: rowsRaw = [], isLoading } = useQuery({
     queryKey: cloQueryKey,
-    enabled: !!maHocPhan,
-    queryFn: () => listClo(maHocPhan!),
+    enabled: !!maDeCuong,
+    queryFn: () => listClo(maDeCuong!),
   });
 
   const rows = useMemo(() => {
@@ -49,7 +73,7 @@ export default function CloPage() {
   }, [rowsRaw, q]);
 
   const createMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; data: any }) => createClo(payload.maHocPhan, payload.data),
+    mutationFn: async (payload: { maDeCuong: string; data: any }) => createClo(payload.maDeCuong, payload.data),
     onSuccess: async () => {
       message.success("Tạo CLO thành công");
       setOpen(false);
@@ -60,8 +84,8 @@ export default function CloPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; maCLO: string; data: Partial<CLO> }) =>
-      updateClo(payload.maHocPhan, payload.maCLO, payload.data),
+    mutationFn: async (payload: { maDeCuong: string; maCLO: string; data: Partial<CLO> }) =>
+      updateClo(payload.maDeCuong, payload.maCLO, payload.data),
     onSuccess: async () => {
       message.success("Cập nhật thành công");
       setOpen(false);
@@ -72,7 +96,7 @@ export default function CloPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; maCLO: string }) => deleteClo(payload.maHocPhan, payload.maCLO),
+    mutationFn: async (payload: { maDeCuong: string; maCLO: string }) => deleteClo(payload.maDeCuong, payload.maCLO),
     onSuccess: async () => {
       message.success("Đã xóa");
       await qc.invalidateQueries({ queryKey: ["clo"] });
@@ -104,7 +128,7 @@ export default function CloPage() {
             title="Xóa CLO?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() => deleteMut.mutate({ maHocPhan: maHocPhan!, maCLO: row.maCLO })}
+            onConfirm={() => deleteMut.mutate({ maDeCuong: maDeCuong!, maCLO: row.maCLO })}
           >
             <Button danger loading={deleteMut.isPending}>
               Xóa
@@ -116,7 +140,7 @@ export default function CloPage() {
   ];
 
   const openCreate = () => {
-    if (!maHocPhan) return;
+    if (!maDeCuong) return;
     setMode("create");
     setEditing(null);
     form.resetFields();
@@ -124,7 +148,7 @@ export default function CloPage() {
   };
 
   const onSubmit = async () => {
-    if (!maHocPhan) return;
+    if (!maDeCuong) return;
 
     const v = await form.validateFields();
     const data: Partial<CLO> = {
@@ -133,12 +157,12 @@ export default function CloPage() {
     };
 
     if (mode === "create") {
-      createMut.mutate({ maHocPhan, data });
+      createMut.mutate({ maDeCuong, data });
       return;
     }
 
     if (!editing) return;
-    updateMut.mutate({ maHocPhan, maCLO: editing.maCLO, data });
+    updateMut.mutate({ maDeCuong, maCLO: editing.maCLO, data });
   };
 
   return (
@@ -152,8 +176,23 @@ export default function CloPage() {
             value={maHocPhan}
             onChange={(v) => {
               setMaHocPhan(v);
+              setMaDeCuong(undefined);
               setQ("");
             }}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 280 }}
+            placeholder="Chọn đề cương"
+            options={dcOptions}
+            value={maDeCuong}
+            onChange={(v) => {
+              setMaDeCuong(v);
+              setQ("");
+            }}
+            disabled={!maHocPhan || deCuongs.length === 0}
             showSearch
             optionFilterProp="label"
           />
@@ -163,20 +202,20 @@ export default function CloPage() {
             allowClear
             onSearch={setQ}
             style={{ width: 280 }}
-            disabled={!maHocPhan}
+            disabled={!maDeCuong}
           />
         </Space>
 
-        <Button type="primary" onClick={openCreate} disabled={!maHocPhan}>
+        <Button type="primary" onClick={openCreate} disabled={!maDeCuong}>
           Tạo CLO
         </Button>
       </Space>
 
       <Table
         rowKey="maCLO"
-        loading={isLoading && !!maHocPhan}
+        loading={isLoading && !!maDeCuong}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         pagination={{ pageSize: 10 }}
       />
 

@@ -23,6 +23,7 @@ export async function listGiangVien() {
 
 export async function listAssignments(params: {
   maSoNganh?: string;
+  khoa?: number;
   maHocPhan?: string;
   MSGV?: string;
   trangThai?: string;

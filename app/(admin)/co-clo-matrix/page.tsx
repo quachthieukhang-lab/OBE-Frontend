@@ -11,16 +11,24 @@ type HocPhan = {
   tenHocPhan: string;
 };
 
+type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
+};
+
 type CLO = {
   maCLO: string;
-  maHocPhan: string;
+  maDeCuong: string;
   code?: string | null;
   noiDungChuanDauRa: string;
 };
 
 type CO = {
   maCO: string;
-  maHocPhan: string;
+  maDeCuong: string;
   code?: string | null;
   noiDungChuanDauRa: string;
 };
@@ -51,30 +59,37 @@ async function listHocPhan() {
   return res.data;
 }
 
-async function listCloCoMatrix(maHocPhan: string) {
+async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
+  return res.data;
+}
+
+async function listCloCoMatrix(maDeCuong: string) {
   const res = await http.get<CloCoMatrixResponse>(
-    `/hoc-phan/${maHocPhan}/clo-co-mapping`
+    `/de-cuong-chi-tiet/${maDeCuong}/clo-co-mapping`
   );
   return res.data;
 }
 
 async function upsertCloCoMapping(payload: {
-  maHocPhan: string;
+  maDeCuong: string;
   maCLO: string;
   maCO: string;
   trongSo: string;
 }) {
-  const { maHocPhan, maCLO, maCO, trongSo } = payload;
+  const { maDeCuong, maCLO, maCO, trongSo } = payload;
 
   try {
     const res = await http.patch(
-      `/hoc-phan/${maHocPhan}/clo/${maCLO}/co-mapping/${maCO}`,
+      `/de-cuong-chi-tiet/${maDeCuong}/clo/${maCLO}/co-mapping/${maCO}`,
       { trongSo }
     );
     return res.data;
   } catch {
     const res = await http.post(
-      `/hoc-phan/${maHocPhan}/clo/${maCLO}/co-mapping`,
+      `/de-cuong-chi-tiet/${maDeCuong}/clo/${maCLO}/co-mapping`,
       { maCO, trongSo }
     );
     return res.data;
@@ -82,12 +97,12 @@ async function upsertCloCoMapping(payload: {
 }
 
 async function deleteCloCoMapping(payload: {
-  maHocPhan: string;
+  maDeCuong: string;
   maCLO: string;
   maCO: string;
 }) {
-  const { maHocPhan, maCLO, maCO } = payload;
-  await http.delete(`/hoc-phan/${maHocPhan}/clo/${maCLO}/co-mapping/${maCO}`);
+  const { maDeCuong, maCLO, maCO } = payload;
+  await http.delete(`/de-cuong-chi-tiet/${maDeCuong}/clo/${maCLO}/co-mapping/${maCO}`);
 }
 
 function buildCellKey(maCO: string, maCLO: string) {
@@ -97,6 +112,7 @@ function buildCellKey(maCO: string, maCLO: string) {
 export default function CloCoMatrixPage() {
   const qc = useQueryClient();
   const [maHocPhan, setMaHocPhan] = useState<string>();
+  const [maDeCuong, setMaDeCuong] = useState<string>();
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
   const { data: hocPhans = [] } = useQuery({
@@ -104,10 +120,32 @@ export default function CloCoMatrixPage() {
     queryFn: listHocPhan,
   });
 
-  const { data: matrixData, isLoading } = useQuery({
-    queryKey: ["clo-co-mapping", maHocPhan],
-    queryFn: () => listCloCoMatrix(maHocPhan!),
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
     enabled: !!maHocPhan,
+  });
+
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const { data: matrixData, isLoading } = useQuery({
+    queryKey: ["clo-co-mapping", maDeCuong],
+    queryFn: () => listCloCoMatrix(maDeCuong!),
+    enabled: !!maDeCuong,
   });
 
   const clos = matrixData?.clos ?? [];
@@ -116,7 +154,7 @@ export default function CloCoMatrixPage() {
 
   const initializedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!maHocPhan) {
+    if (!maDeCuong) {
       setDraftValues({});
       initializedKeyRef.current = null;
       return;
@@ -143,7 +181,7 @@ export default function CloCoMatrixPage() {
 
     initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, matrixData]);
+  }, [maDeCuong, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return cos.map((co) => {
@@ -199,7 +237,7 @@ export default function CloCoMatrixPage() {
 
   const saveAllMut = useMutation({
     mutationFn: async () => {
-      if (!maHocPhan) return;
+      if (!maDeCuong) return;
 
       const invalidColumns = validateColumnTotals();
       if (invalidColumns.length > 0) {
@@ -229,7 +267,7 @@ export default function CloCoMatrixPage() {
         if (nextValue == null || nextValue === "") {
           if (oldValue != null) {
             await deleteCloCoMapping({
-              maHocPhan,
+              maDeCuong,
               maCLO,
               maCO,
             });
@@ -238,7 +276,7 @@ export default function CloCoMatrixPage() {
         }
 
         await upsertCloCoMapping({
-          maHocPhan,
+          maDeCuong,
           maCLO,
           maCO,
           trongSo: nextValue,
@@ -246,7 +284,7 @@ export default function CloCoMatrixPage() {
       }
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["clo-co-mapping", maHocPhan] });
+      await qc.invalidateQueries({ queryKey: ["clo-co-mapping", maDeCuong] });
       message.success("Lưu thành công");
     },
     onError: (error: any) => {
@@ -347,7 +385,22 @@ export default function CloCoMatrixPage() {
           onChange={(value) => {
             initializedKeyRef.current = null;
             setMaHocPhan(value);
+            setMaDeCuong(undefined);
           }}
+          showSearch
+          optionFilterProp="label"
+        />
+
+        <Select
+          style={{ width: 280 }}
+          placeholder="Chọn đề cương"
+          options={dcOptions}
+          value={maDeCuong}
+          onChange={(v) => {
+            initializedKeyRef.current = null;
+            setMaDeCuong(v);
+          }}
+          disabled={!maHocPhan || deCuongs.length === 0}
           showSearch
           optionFilterProp="label"
         />
@@ -356,7 +409,7 @@ export default function CloCoMatrixPage() {
           type="primary"
           onClick={handleSaveAll}
           loading={saveAllMut.isPending}
-          disabled={!maHocPhan}
+          disabled={!maDeCuong}
         >
           Lưu
         </Button>
@@ -366,7 +419,7 @@ export default function CloCoMatrixPage() {
         rowKey="key"
         loading={isLoading}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         scroll={{ x: 1400 }}
         pagination={false}
         bordered

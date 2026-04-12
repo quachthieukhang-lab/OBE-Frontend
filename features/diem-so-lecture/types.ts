@@ -1,5 +1,6 @@
 export type LecturerClass = {
     maLopHocPhan: string;
+    MSGV: string;
     maHocPhan: string;
     hocKy: number;
     khoa: number;
@@ -28,7 +29,7 @@ export type LecturerClass = {
   
   export type CachDanhGia = {
     maCDG: string;
-    maHocPhan: string;
+    maDeCuong: string;
     tenThanhPhan: string;
     cachDanhGia?: string | null;
     trongSo: string;

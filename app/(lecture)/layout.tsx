@@ -10,6 +10,8 @@ import {
   CalendarOutlined,
   ReadOutlined,
   ApartmentOutlined,
+  EditOutlined,
+  EyeOutlined,
   ScheduleOutlined,
   UserOutlined,
   FormOutlined,
@@ -56,10 +58,14 @@ const MENU: MenuItem[] = [
   //   getItem("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
   // ]),
 
+
+
+  getItem("Đề cương", "sub-de-cuong", <FileTextOutlined />, [
+    getItem("Nhập đề cương", "/nhap-de-cuong", <EditOutlined />),
+    getItem("Xem đề cương đã nhập", "/de-cuong-lecture", <EyeOutlined />),
+  ]),
+
   getItem("Vận hành học vụ", "sub-academic", <ScheduleOutlined />, [
-    getItem("Lớp học phần", "/lop-hoc-phan", <ScheduleOutlined />),
-    // getItem("Đăng ký học phần", "/dang-ky-hoc-phan", <FormOutlined />),
-    getItem("Phân công đề cương", "/phan-cong-de-cuong", <FileDoneOutlined />),
     getItem("Điểm số phụ trách", "/diem-so-lecture", <BarChartOutlined />),
   ]),
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -31,6 +31,8 @@ import {
   listPrograms,
   updateProgramCourse,
 } from "@/features/chuong-trinh-dao-tao-hoc-phan/api";
+import { listProgramCohorts } from "@/features/chuong-trinh-nien-khoa/api";
+import type { ChuongTrinhNienKhoa } from "@/features/chuong-trinh-nien-khoa/types";
 
 type Mode = "create" | "edit";
 
@@ -39,6 +41,7 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
   const [form] = Form.useForm<any>();
 
   const [program, setProgram] = useState<string | undefined>();
+  const [khoa, setKhoa] = useState<number | undefined>();
   const [q, setQ] = useState("");
   const [hocKyFilter, setHocKyFilter] = useState<number | undefined>();
   const [open, setOpen] = useState(false);
@@ -73,15 +76,40 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
     [hocPhans]
   );
 
+  const { data: cohorts = [] } = useQuery({
+    queryKey: ["chuong-trinh-nien-khoa", program],
+    queryFn: () => listProgramCohorts(program!),
+    enabled: !!program,
+  });
+
+  const cohortOptions = useMemo(
+    () =>
+      cohorts.map((c: ChuongTrinhNienKhoa) => ({
+        label: `K${c.khoa}${c.phienBan ? ` — ${c.phienBan}` : ""}`,
+        value: c.khoa,
+      })),
+    [cohorts]
+  );
+
+  useEffect(() => {
+    if (!program) {
+      setKhoa(undefined);
+      return;
+    }
+    if (cohorts.length === 1) {
+      setKhoa(cohorts[0].khoa);
+    }
+  }, [program, cohorts]);
+
   const queryKey = useMemo(
-    () => ["chuong-trinh-dao-tao-hoc-phan", { program }],
-    [program]
+    () => ["chuong-trinh-dao-tao-hoc-phan", { program, khoa }],
+    [program, khoa]
   );
 
   const { data: rowsRaw = [], isLoading } = useQuery({
     queryKey,
-    enabled: !!program,
-    queryFn: () => listProgramCourses(program!),
+    enabled: !!program && khoa != null,
+    queryFn: () => listProgramCourses(program!, khoa!),
   });
 
   const rows = useMemo(() => {
@@ -109,8 +137,11 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
   }, [rowsRaw, hocKyFilter, q, hocPhans]);
 
   const createMut = useMutation({
-    mutationFn: async (payload: { maSoNganh: string; data: Omit<ChuongTrinhDaoTaoHocPhan, "maSoNganh"> }) =>
-      createProgramCourse(payload.maSoNganh, payload.data),
+    mutationFn: async (payload: {
+      maSoNganh: string;
+      khoa: number;
+      data: Omit<ChuongTrinhDaoTaoHocPhan, "maSoNganh">;
+    }) => createProgramCourse(payload.maSoNganh, payload.khoa, payload.data),
     onSuccess: async () => {
       message.success("Thêm học phần vào CTĐT thành công");
       setOpen(false);
@@ -124,9 +155,10 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
   const updateMut = useMutation({
     mutationFn: async (payload: {
       maSoNganh: string;
+      khoa: number;
       maHocPhan: string;
       data: Partial<ChuongTrinhDaoTaoHocPhan>;
-    }) => updateProgramCourse(payload.maSoNganh, payload.maHocPhan, payload.data),
+    }) => updateProgramCourse(payload.maSoNganh, payload.khoa, payload.maHocPhan, payload.data),
     onSuccess: async () => {
       message.success("Cập nhật thành công");
       setOpen(false);
@@ -138,8 +170,8 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: async (payload: { maSoNganh: string; maHocPhan: string }) =>
-      deleteProgramCourse(payload.maSoNganh, payload.maHocPhan),
+    mutationFn: async (payload: { maSoNganh: string; khoa: number; maHocPhan: string }) =>
+      deleteProgramCourse(payload.maSoNganh, payload.khoa, payload.maHocPhan),
     onSuccess: async () => {
       message.success("Đã xóa");
       await qc.invalidateQueries({ queryKey: ["chuong-trinh-dao-tao-hoc-phan"] });
@@ -208,12 +240,14 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
             title="Xóa học phần khỏi CTĐT?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() =>
+            onConfirm={() => {
+              if (khoa == null) return;
               deleteMut.mutate({
                 maSoNganh: row.maSoNganh,
+                khoa,
                 maHocPhan: row.maHocPhan,
-              })
-            }
+              });
+            }}
           >
             <Button danger loading={deleteMut.isPending}>
               Xóa
@@ -225,7 +259,10 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
   ];
 
   const openCreate = () => {
-    if (!program) return;
+    if (!program || khoa == null) {
+      message.warning("Chọn chương trình đào tạo và niên khóa (khóa)");
+      return;
+    }
     setMode("create");
     setEditing(null);
     form.resetFields();
@@ -251,12 +288,13 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
     };
 
     if (mode === "create") {
+      if (khoa == null) return;
       const { maSoNganh, ...data } = payload;
-      createMut.mutate({ maSoNganh, data });
+      createMut.mutate({ maSoNganh, khoa, data });
       return;
     }
 
-    if (!editing) return;
+    if (!editing || khoa == null) return;
 
     const data: Partial<ChuongTrinhDaoTaoHocPhan> = {
       hocKyDuKien: payload.hocKyDuKien,
@@ -268,6 +306,7 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
 
     updateMut.mutate({
       maSoNganh: editing.maSoNganh,
+      khoa,
       maHocPhan: editing.maHocPhan,
       data,
     });
@@ -287,9 +326,22 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
             value={program}
             onChange={(v) => {
               setProgram(v);
+              setKhoa(undefined);
               setQ("");
               setHocKyFilter(undefined);
             }}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 220 }}
+            placeholder="Niên khóa (K)"
+            options={cohortOptions}
+            value={khoa}
+            onChange={(v) => setKhoa(v ?? undefined)}
+            disabled={!program}
+            allowClear={cohorts.length > 1}
             showSearch
             optionFilterProp="label"
           />
@@ -312,20 +364,20 @@ export default function ChuongTrinhDaoTaoHocPhanPage() {
             allowClear
             onSearch={setQ}
             style={{ width: 280 }}
-            disabled={!program}
+            disabled={!program || khoa == null}
           />
         </Space>
 
-        <Button type="primary" onClick={openCreate} disabled={!program}>
+        <Button type="primary" onClick={openCreate} disabled={!program || khoa == null}>
           Thêm học phần vào CTĐT
         </Button>
       </Space>
 
       <Table
         rowKey={(r) => `${r.maSoNganh}-${r.maHocPhan}`}
-        loading={isLoading && !!program}
+        loading={isLoading && !!program && khoa != null}
         columns={columns}
-        dataSource={program ? rows : []}
+        dataSource={program && khoa != null ? rows : []}
         pagination={{ pageSize: 10 }}
       />
 

@@ -25,4 +25,8 @@ export type ChuongTrinhNienKhoa = {
   ngayBanHanh?: string | null; // ISO date
   moTa?: string | null;
   trangThai: string; // default active
+
+  /** GET niên khóa / CTĐT chi tiết có thể kèm theo */
+  chuongTrinhHocPhans?: unknown[];
+  plos?: unknown[];
 };

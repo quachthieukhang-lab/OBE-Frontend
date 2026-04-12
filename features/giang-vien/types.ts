@@ -8,6 +8,7 @@ export type GiangVien = {
   maDonVi: string;
 
   hoTen: string;
+  gioiTinh: "Nam" | "Nữ";
   email?: string | null;
   soDienThoai?: string | null;
 

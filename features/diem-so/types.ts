@@ -1,6 +1,7 @@
 export type LopHocPhan = {
   maLopHocPhan: string;
   maHocPhan: string;
+  maDeCuong?: string | null;
   MSGV: string;
   khoa: number;
   hocKy: number;
@@ -21,7 +22,7 @@ export type SinhVien = {
 
 export type CachDanhGia = {
   maCDG: string;
-  maHocPhan: string;
+  maDeCuong: string;
   tenThanhPhan: string;
   cachDanhGia?: string | null;
   trongSo: string;
@@ -31,6 +32,14 @@ export type CachDanhGia = {
 export type GiangVien = {
   MSGV: string;
   hoTen: string;
+};
+
+export type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
 };
 
 export type DiemSo = {

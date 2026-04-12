@@ -5,15 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Input, Select, Space, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import type { CO, HocPhan } from "@/features/co/types";
-// Chỉ import hàm lấy danh sách (list), gỡ bỏ create, update, delete
-import { listCo, listHocPhan } from "@/features/co/api";
+import type { CO, DeCuongChiTiet, HocPhan } from "@/features/co/types";
+import { listCo, listDeCuong, listHocPhan } from "@/features/co/api";
 
 export default function CoReadOnlyPage() {
   const [maHocPhan, setMaHocPhan] = useState<string | undefined>();
+  const [maDeCuong, setMaDeCuong] = useState<string | undefined>();
   const [q, setQ] = useState("");
 
-  // 1. Fetch danh sách Học phần để đưa vào Select
   const { data: hocPhans = [] } = useQuery({
     queryKey: ["hoc-phan"],
     queryFn: listHocPhan,
@@ -28,16 +27,36 @@ export default function CoReadOnlyPage() {
     [hocPhans]
   );
 
-  const coQueryKey = useMemo(() => ["co", { maHocPhan }], [maHocPhan]);
-
-  // 2. Fetch danh sách CO dựa vào Học phần đã chọn
-  const { data: rowsRaw = [], isLoading } = useQuery({
-    queryKey: coQueryKey,
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
     enabled: !!maHocPhan,
-    queryFn: () => listCo(maHocPhan!),
   });
 
-  // 3. Logic thanh Tìm kiếm (Search)
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const coQueryKey = useMemo(() => ["co", { maDeCuong }], [maDeCuong]);
+
+  const { data: rowsRaw = [], isLoading } = useQuery({
+    queryKey: coQueryKey,
+    enabled: !!maDeCuong,
+    queryFn: () => listCo(maDeCuong!),
+  });
+
   const rows = useMemo(() => {
     if (!q.trim()) return rowsRaw;
     const s = q.trim().toLowerCase();
@@ -48,18 +67,17 @@ export default function CoReadOnlyPage() {
     );
   }, [rowsRaw, q]);
 
-  // 4. Cấu hình cột hiển thị (Đã gỡ bỏ cột Hành Động)
   const columns: ColumnsType<CO> = [
-    { 
-      title: "Code", 
-      dataIndex: "code", 
-      width: 120, 
-      render: (v) => (v ? <Tag color="blue">{v}</Tag> : "-") 
+    {
+      title: "Code",
+      dataIndex: "code",
+      width: 120,
+      render: (v) => (v ? <Tag color="blue">{v}</Tag> : "-")
     },
-    { 
-      title: "Nội dung chuẩn đầu ra CO", 
-      dataIndex: "noiDungChuanDauRa", 
-      ellipsis: false // Tắt ellipsis để Giảng viên đọc được toàn bộ câu dài
+    {
+      title: "Nội dung chuẩn đầu ra CO",
+      dataIndex: "noiDungChuanDauRa",
+      ellipsis: false
     },
   ];
 
@@ -74,8 +92,23 @@ export default function CoReadOnlyPage() {
             value={maHocPhan}
             onChange={(v) => {
               setMaHocPhan(v);
-              setQ(""); // Xóa thanh tìm kiếm khi đổi môn khác
+              setMaDeCuong(undefined);
+              setQ("");
             }}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 280 }}
+            placeholder="Chọn đề cương"
+            options={dcOptions}
+            value={maDeCuong}
+            onChange={(v) => {
+              setMaDeCuong(v);
+              setQ("");
+            }}
+            disabled={!maHocPhan || deCuongs.length === 0}
             showSearch
             optionFilterProp="label"
           />
@@ -85,16 +118,16 @@ export default function CoReadOnlyPage() {
             allowClear
             onSearch={setQ}
             style={{ width: 280 }}
-            disabled={!maHocPhan} // Khóa ô search nếu chưa chọn môn
+            disabled={!maDeCuong}
           />
         </Space>
       </Space>
 
       <Table
         rowKey="maCO"
-        loading={isLoading && !!maHocPhan}
+        loading={isLoading && !!maDeCuong}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         pagination={{ pageSize: 10 }}
         bordered
       />

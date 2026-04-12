@@ -19,10 +19,11 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
-import type { GiangVien, HocPhan, NienKhoa, LopHocPhan } from "@/features/lop-hoc-phan/types";
+import type { DeCuongChiTiet, GiangVien, HocPhan, NienKhoa, LopHocPhan } from "@/features/lop-hoc-phan/types";
 import {
   createLopHocPhan,
   deleteLopHocPhan,
+  listDeCuong,
   listGiangVien,
   listHocPhan,
   listLopHocPhan,
@@ -47,6 +48,8 @@ export default function LopHocPhanPage() {
   const [mode, setMode] = useState<Mode>("create");
   const [editing, setEditing] = useState<LopHocPhan | null>(null);
 
+  const [formMaHocPhan, setFormMaHocPhan] = useState<string | undefined>();
+
   const queryKey = useMemo(() => ["lop-hoc-phan", { q }], [q]);
 
   const { data: rows = [], isLoading } = useQuery({
@@ -69,6 +72,12 @@ export default function LopHocPhanPage() {
     queryFn: listNienKhoa,
   });
 
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan: formMaHocPhan }],
+    queryFn: () => listDeCuong(formMaHocPhan!),
+    enabled: !!formMaHocPhan,
+  });
+
   const gvOptions = useMemo(
     () => giangViens.map((gv: GiangVien) => ({ label: `${gv.hoTen} (${gv.MSGV})`, value: gv.MSGV })),
     [giangViens]
@@ -88,12 +97,22 @@ export default function LopHocPhanPage() {
     [nienKhoas]
   );
 
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
   const createMut = useMutation({
     mutationFn: createLopHocPhan,
     onSuccess: async () => {
       message.success("Tạo lớp học phần thành công");
       setOpen(false);
       form.resetFields();
+      setFormMaHocPhan(undefined);
       await qc.invalidateQueries({ queryKey: ["lop-hoc-phan"] });
     },
     onError: (e: any) => message.error(e?.response?.data?.message ?? "Tạo thất bại"),
@@ -105,6 +124,7 @@ export default function LopHocPhanPage() {
       message.success("Cập nhật thành công");
       setOpen(false);
       form.resetFields();
+      setFormMaHocPhan(undefined);
       await qc.invalidateQueries({ queryKey: ["lop-hoc-phan"] });
     },
     onError: (e: any) => message.error(e?.response?.data?.message ?? "Cập nhật thất bại"),
@@ -154,6 +174,7 @@ export default function LopHocPhanPage() {
             onClick={() => {
               setMode("edit");
               setEditing(row);
+              setFormMaHocPhan(row.maHocPhan);
               setOpen(true);
               form.setFieldsValue({
                 ...row,
@@ -183,6 +204,7 @@ export default function LopHocPhanPage() {
   const openCreate = () => {
     setMode("create");
     setEditing(null);
+    setFormMaHocPhan(undefined);
     form.resetFields();
     form.setFieldsValue({ hocKy: 1, status: "open" } as any);
     setOpen(true);
@@ -195,6 +217,7 @@ export default function LopHocPhanPage() {
       maLopHocPhan: v.maLopHocPhan,
       MSGV: v.MSGV,
       maHocPhan: v.maHocPhan,
+      maDeCuong: v.maDeCuong ?? null,
       khoa: v.khoa,
       hocKy: v.hocKy,
       nhom: v.nhom ?? null,
@@ -241,7 +264,10 @@ export default function LopHocPhanPage() {
       <Modal
         open={open}
         title={mode === "create" ? "Tạo lớp học phần" : "Sửa lớp học phần"}
-        onCancel={() => setOpen(false)}
+        onCancel={() => {
+          setOpen(false);
+          setFormMaHocPhan(undefined);
+        }}
         onOk={onSubmit}
         confirmLoading={createMut.isPending || updateMut.isPending}
         destroyOnHidden
@@ -270,7 +296,15 @@ export default function LopHocPhanPage() {
               rules={[{ required: true, message: "Chọn học phần" }]}
               style={{ flex: 1, width: 200}}
             >
-              <Select showSearch optionFilterProp="label" options={hpOptions} />
+              <Select
+                showSearch
+                optionFilterProp="label"
+                options={hpOptions}
+                onChange={(v) => {
+                  setFormMaHocPhan(v);
+                  form.setFieldsValue({ maDeCuong: undefined });
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -282,6 +316,17 @@ export default function LopHocPhanPage() {
               <Select showSearch optionFilterProp="label" options={gvOptions} />
             </Form.Item>
           </Space>
+
+          <Form.Item label="Đề cương chi tiết" name="maDeCuong">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={dcOptions}
+              disabled={!formMaHocPhan || deCuongs.length === 0}
+              placeholder={!formMaHocPhan ? "Chọn học phần trước" : "Chọn đề cương (tùy chọn)"}
+            />
+          </Form.Item>
 
           <Space style={{ width: "100%" }} size={12}>
             <Form.Item

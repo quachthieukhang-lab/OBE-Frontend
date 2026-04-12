@@ -33,6 +33,8 @@ import {
   listPrograms,
   updateAssignment,
 } from "@/features/phan-cong-de-cuong/api";
+import { listProgramCohorts } from "@/features/chuong-trinh-nien-khoa/api";
+import type { ChuongTrinhNienKhoa } from "@/features/chuong-trinh-nien-khoa/types";
 
 type Mode = "create" | "edit";
 
@@ -55,6 +57,7 @@ export default function PhanCongDeCuongPage() {
   const [form] = Form.useForm<any>();
 
   const [maSoNganh, setMaSoNganh] = useState<string | undefined>();
+  const [filterKhoa, setFilterKhoa] = useState<number | undefined>();
   const [maHocPhan, setMaHocPhan] = useState<string | undefined>();
   const [MSGV, setMSGV] = useState<string | undefined>();
   const [trangThai, setTrangThai] = useState<string | undefined>();
@@ -97,6 +100,38 @@ export default function PhanCongDeCuongPage() {
     [hocPhans]
   );
 
+  const { data: filterCohorts = [] } = useQuery({
+    queryKey: ["chuong-trinh-nien-khoa", maSoNganh],
+    queryFn: () => listProgramCohorts(maSoNganh!),
+    enabled: !!maSoNganh,
+  });
+
+  const filterCohortOptions = useMemo(
+    () =>
+      filterCohorts.map((c: ChuongTrinhNienKhoa) => ({
+        label: `K${c.khoa}${c.phienBan ? ` — ${c.phienBan}` : ""}`,
+        value: c.khoa,
+      })),
+    [filterCohorts]
+  );
+
+  const formMaSoNganh = Form.useWatch("maSoNganh", form);
+
+  const { data: formCohorts = [] } = useQuery({
+    queryKey: ["chuong-trinh-nien-khoa-modal", formMaSoNganh],
+    queryFn: () => listProgramCohorts(formMaSoNganh as string),
+    enabled: !!formMaSoNganh && open,
+  });
+
+  const formCohortOptions = useMemo(
+    () =>
+      formCohorts.map((c: ChuongTrinhNienKhoa) => ({
+        label: `K${c.khoa}${c.phienBan ? ` — ${c.phienBan}` : ""}`,
+        value: c.khoa,
+      })),
+    [formCohorts]
+  );
+
   const giangVienOptions = useMemo(
     () =>
       giangViens.map((gv: GiangVien) => ({
@@ -107,8 +142,8 @@ export default function PhanCongDeCuongPage() {
   );
 
   const queryKey = useMemo(
-    () => ["phan-cong-de-cuong", { maSoNganh, maHocPhan, MSGV, trangThai, q }],
-    [maSoNganh, maHocPhan, MSGV, trangThai, q]
+    () => ["phan-cong-de-cuong", { maSoNganh, filterKhoa, maHocPhan, MSGV, trangThai, q }],
+    [maSoNganh, filterKhoa, maHocPhan, MSGV, trangThai, q]
   );
 
   const { data: rows = [], isLoading } = useQuery({
@@ -116,6 +151,7 @@ export default function PhanCongDeCuongPage() {
     queryFn: () =>
       listAssignments({
         maSoNganh,
+        khoa: filterKhoa,
         maHocPhan,
         MSGV,
         trangThai,
@@ -167,6 +203,12 @@ export default function PhanCongDeCuongPage() {
         const p = programs.find((x) => x.maSoNganh === v);
         return p ? `${p.tenTiengViet} (${p.maSoNganh})` : v;
       },
+    },
+    {
+      title: "Khóa",
+      dataIndex: "khoa",
+      width: 90,
+      render: (v) => (v != null ? <Tag>K{v}</Tag> : "-"),
     },
     {
       title: "Học phần",
@@ -256,6 +298,7 @@ export default function PhanCongDeCuongPage() {
     form.resetFields();
     form.setFieldsValue({
       maSoNganh,
+      khoa: filterKhoa,
       maHocPhan,
       MSGV,
       vaiTro: "owner",
@@ -269,6 +312,7 @@ export default function PhanCongDeCuongPage() {
 
     const payload = {
       maSoNganh: v.maSoNganh,
+      khoa: Number(v.khoa),
       maHocPhan: v.maHocPhan,
       MSGV: v.MSGV,
       vaiTro: v.vaiTro,
@@ -302,7 +346,22 @@ export default function PhanCongDeCuongPage() {
             placeholder="Chọn CTĐT"
             options={programOptions}
             value={maSoNganh}
-            onChange={setMaSoNganh}
+            onChange={(v) => {
+              setMaSoNganh(v);
+              setFilterKhoa(undefined);
+            }}
+            allowClear
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 200 }}
+            placeholder="Lọc khóa"
+            options={filterCohortOptions}
+            value={filterKhoa}
+            onChange={(v) => setFilterKhoa(v ?? undefined)}
+            disabled={!maSoNganh}
             allowClear
             showSearch
             optionFilterProp="label"
@@ -378,6 +437,21 @@ export default function PhanCongDeCuongPage() {
               style={{ flex: 1 }}
             >
               <Select options={programOptions} showSearch optionFilterProp="label" />
+            </Form.Item>
+
+            <Form.Item
+              label="Niên khóa (K)"
+              name="khoa"
+              rules={[{ required: true, message: "Chọn khóa" }]}
+              style={{ flex: 1 }}
+            >
+              <Select
+                options={formCohortOptions}
+                showSearch
+                optionFilterProp="label"
+                disabled={!formMaSoNganh}
+                placeholder="Chọn khóa"
+              />
             </Form.Item>
 
             <Form.Item

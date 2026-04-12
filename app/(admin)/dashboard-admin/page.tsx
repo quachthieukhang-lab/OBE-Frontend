@@ -149,11 +149,13 @@ function KpiCard({
           </Text>
           <Statistic
             value={value}
-            valueStyle={{
-              fontSize: 24,
-              fontWeight: 600,
-              lineHeight: 1.25,
-              color: "rgba(0, 0, 0, 0.88)",
+            styles={{
+              content: {
+                fontSize: 24,
+                fontWeight: 600,
+                lineHeight: 1.25,
+                color: "rgba(0, 0, 0, 0.88)",
+              },
             }}
           />
         </div>

@@ -57,6 +57,7 @@ const MENU: MenuItem[] = [
     getItem("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
     getItem("Học phần", "/hoc-phan", <BookOutlined />),
     getItem("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
+    getItem("Đề cương chi tiết", "/de-cuong-chi-tiet", <FileDoneOutlined />),
     getItem("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
   ]),
 

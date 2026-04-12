@@ -17,11 +17,12 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import type { CachDanhGia, HocPhan } from "@/features/cach-danh-gia/types";
+import type { CachDanhGia, DeCuongChiTiet, HocPhan } from "@/features/cach-danh-gia/types";
 import {
   createCachDanhGia,
   deleteCachDanhGia,
   listCachDanhGia,
+  listDeCuong,
   listHocPhan,
   updateCachDanhGia,
 } from "@/features/cach-danh-gia/api";
@@ -42,6 +43,7 @@ export default function CachDanhGiaPage() {
   const [form] = Form.useForm<any>();
 
   const [maHocPhan, setMaHocPhan] = useState<string | undefined>();
+  const [maDeCuong, setMaDeCuong] = useState<string | undefined>();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("create");
@@ -61,12 +63,34 @@ export default function CachDanhGiaPage() {
     [hocPhans]
   );
 
-  const queryKey = useMemo(() => ["cach-danh-gia", { maHocPhan }], [maHocPhan]);
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
+    enabled: !!maHocPhan,
+  });
+
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const queryKey = useMemo(() => ["cach-danh-gia", { maDeCuong }], [maDeCuong]);
 
   const { data: rowsRaw = [], isLoading } = useQuery({
     queryKey,
-    enabled: !!maHocPhan,
-    queryFn: () => listCachDanhGia(maHocPhan!),
+    enabled: !!maDeCuong,
+    queryFn: () => listCachDanhGia(maDeCuong!),
   });
 
   const rows = useMemo(() => {
@@ -83,9 +107,9 @@ export default function CachDanhGiaPage() {
 
   const createMut = useMutation({
     mutationFn: async (payload: {
-      maHocPhan: string;
-      data: Omit<CachDanhGia, "maCDG" | "maHocPhan">;
-    }) => createCachDanhGia(payload.maHocPhan, payload.data),
+      maDeCuong: string;
+      data: Omit<CachDanhGia, "maCDG" | "maDeCuong">;
+    }) => createCachDanhGia(payload.maDeCuong, payload.data),
     onSuccess: async () => {
       message.success("Tạo cách đánh giá thành công");
       setOpen(false);
@@ -98,10 +122,10 @@ export default function CachDanhGiaPage() {
 
   const updateMut = useMutation({
     mutationFn: async (payload: {
-      maHocPhan: string;
+      maDeCuong: string;
       maCDG: string;
       data: Partial<CachDanhGia>;
-    }) => updateCachDanhGia(payload.maHocPhan, payload.maCDG, payload.data),
+    }) => updateCachDanhGia(payload.maDeCuong, payload.maCDG, payload.data),
     onSuccess: async () => {
       message.success("Cập nhật thành công");
       setOpen(false);
@@ -113,8 +137,8 @@ export default function CachDanhGiaPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: async (payload: { maHocPhan: string; maCDG: string }) =>
-      deleteCachDanhGia(payload.maHocPhan, payload.maCDG),
+    mutationFn: async (payload: { maDeCuong: string; maCDG: string }) =>
+      deleteCachDanhGia(payload.maDeCuong, payload.maCDG),
     onSuccess: async () => {
       message.success("Đã xóa");
       await qc.invalidateQueries({ queryKey: ["cach-danh-gia"] });
@@ -159,7 +183,6 @@ export default function CachDanhGiaPage() {
               setOpen(true);
               form.setFieldsValue({
                 ...row,
-                // convert string decimal -> number for InputNumber
                 trongSo: Number(row.trongSo),
               });
             }}
@@ -172,7 +195,7 @@ export default function CachDanhGiaPage() {
             okText="Xóa"
             cancelText="Hủy"
             onConfirm={() =>
-              deleteMut.mutate({ maHocPhan: maHocPhan!, maCDG: row.maCDG })
+              deleteMut.mutate({ maDeCuong: maDeCuong!, maCDG: row.maCDG })
             }
           >
             <Button danger loading={deleteMut.isPending}>
@@ -185,7 +208,7 @@ export default function CachDanhGiaPage() {
   ];
 
   const openCreate = () => {
-    if (!maHocPhan) return;
+    if (!maDeCuong) return;
     setMode("create");
     setEditing(null);
     form.resetFields();
@@ -196,7 +219,7 @@ export default function CachDanhGiaPage() {
   };
 
   const onSubmit = async () => {
-    if (!maHocPhan) return;
+    if (!maDeCuong) return;
 
     const v = await form.validateFields();
 
@@ -209,8 +232,8 @@ export default function CachDanhGiaPage() {
 
     if (mode === "create") {
       createMut.mutate({
-        maHocPhan,
-        data: data as Omit<CachDanhGia, "maCDG" | "maHocPhan">,
+        maDeCuong,
+        data: data as Omit<CachDanhGia, "maCDG" | "maDeCuong">,
       });
       return;
     }
@@ -218,7 +241,7 @@ export default function CachDanhGiaPage() {
     if (!editing) return;
 
     updateMut.mutate({
-      maHocPhan,
+      maDeCuong,
       maCDG: editing.maCDG,
       data,
     });
@@ -238,8 +261,23 @@ export default function CachDanhGiaPage() {
             value={maHocPhan}
             onChange={(v) => {
               setMaHocPhan(v);
+              setMaDeCuong(undefined);
               setQ("");
             }}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 280 }}
+            placeholder="Chọn đề cương"
+            options={dcOptions}
+            value={maDeCuong}
+            onChange={(v) => {
+              setMaDeCuong(v);
+              setQ("");
+            }}
+            disabled={!maHocPhan || deCuongs.length === 0}
             showSearch
             optionFilterProp="label"
           />
@@ -249,20 +287,20 @@ export default function CachDanhGiaPage() {
             allowClear
             onSearch={setQ}
             style={{ width: 280 }}
-            disabled={!maHocPhan}
+            disabled={!maDeCuong}
           />
         </Space>
 
-        <Button type="primary" onClick={openCreate} disabled={!maHocPhan}>
+        <Button type="primary" onClick={openCreate} disabled={!maDeCuong}>
           Tạo cách đánh giá
         </Button>
       </Space>
 
       <Table
         rowKey="maCDG"
-        loading={isLoading && !!maHocPhan}
+        loading={isLoading && !!maDeCuong}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         pagination={{ pageSize: 10 }}
       />
 

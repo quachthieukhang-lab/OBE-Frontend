@@ -1,19 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Select, Space, Table, Tag } from "antd";
+import { Select, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useQuery } from "@tanstack/react-query";
 import { http } from "@/lib/api/http";
+import { listChuongTrinhDaoTao } from "@/features/chuong-trinh-dao-tao/api";
+import type { ChuongTrinhDaoTao } from "@/features/chuong-trinh-dao-tao/types";
+import { listProgramCohorts } from "@/features/chuong-trinh-nien-khoa/api";
+import type { ChuongTrinhNienKhoa } from "@/features/chuong-trinh-nien-khoa/types";
+
+const { Text } = Typography;
 
 type HocPhan = {
   maHocPhan: string;
   tenHocPhan: string;
 };
 
+type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
+};
+
 type CLO = {
   maCLO: string;
-  maHocPhan: string;
+  maDeCuong: string;
   code?: string | null;
   noiDungChuanDauRa: string;
 };
@@ -23,6 +37,7 @@ type PLO = {
   maSoNganh: string;
   code?: string | null;
   noiDungChuanDauRa: string;
+  khoa?: number | null;
 };
 
 type CloPloMapping = {
@@ -46,15 +61,28 @@ type MatrixRow = {
   [key: string]: string | null | undefined;
 };
 
+function cohortQuery(maSoNganh?: string, khoa?: number) {
+  if (maSoNganh && khoa != null) return { maSoNganh, khoa };
+  return undefined;
+}
+
 async function listHocPhan() {
   const res = await http.get<HocPhan[]>("/hoc-phan");
   return res.data;
 }
 
-async function listCloPloMatrix(maHocPhan: string) {
-  const res = await http.get<CloPloMatrixResponse>(
-    `/hoc-phan/${maHocPhan}/clo-plo-mapping`
-  );
+async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
+  return res.data;
+}
+
+async function listCloPloMatrix(maDeCuong: string, maSoNganh?: string, khoa?: number) {
+  const params = cohortQuery(maSoNganh, khoa);
+  const res = await http.get<CloPloMatrixResponse>(`/de-cuong-chi-tiet/${maDeCuong}/clo-plo-mapping`, {
+    params,
+  });
   return res.data;
 }
 
@@ -62,8 +90,11 @@ function buildCellKey(maCLO: string, maPLO: string) {
   return `${maCLO}__${maPLO}`;
 }
 
-export default function CloPloMatrixPage() {
+export default function CloPloMatrixLecturePage() {
   const [maHocPhan, setMaHocPhan] = useState<string>();
+  const [maDeCuong, setMaDeCuong] = useState<string>();
+  const [maSoNganh, setMaSoNganh] = useState<string>();
+  const [khoa, setKhoa] = useState<number>();
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
   const { data: hocPhans = [] } = useQuery({
@@ -71,18 +102,74 @@ export default function CloPloMatrixPage() {
     queryFn: listHocPhan,
   });
 
-  const { data: matrixData, isLoading } = useQuery({
-    queryKey: ["clo-plo-mapping", maHocPhan],
-    queryFn: () => listCloPloMatrix(maHocPhan!),
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
     enabled: !!maHocPhan,
+  });
+
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const { data: programs = [] } = useQuery({
+    queryKey: ["chuong-trinh-dao-tao"],
+    queryFn: () => listChuongTrinhDaoTao({}),
+  });
+
+  const { data: cohorts = [] } = useQuery({
+    queryKey: ["chuong-trinh-nien-khoa", maSoNganh],
+    queryFn: () => listProgramCohorts(maSoNganh!),
+    enabled: !!maSoNganh,
+  });
+
+  const programOptions = useMemo(
+    () =>
+      programs.map((p: ChuongTrinhDaoTao) => ({
+        label: `${p.tenTiengViet} (${p.maSoNganh})`,
+        value: p.maSoNganh,
+      })),
+    [programs]
+  );
+
+  const cohortOptions = useMemo(
+    () =>
+      cohorts.map((c: ChuongTrinhNienKhoa) => ({
+        label: `K${c.khoa}${c.phienBan ? ` — ${c.phienBan}` : ""}`,
+        value: c.khoa,
+      })),
+    [cohorts]
+  );
+
+  const matrixQueryKey = useMemo(
+    () => ["clo-plo-mapping", maDeCuong, maSoNganh ?? null, khoa ?? null] as const,
+    [maDeCuong, maSoNganh, khoa]
+  );
+
+  const { data: matrixData, isLoading } = useQuery({
+    queryKey: matrixQueryKey,
+    queryFn: () => listCloPloMatrix(maDeCuong!, maSoNganh, khoa),
+    enabled: !!maDeCuong,
   });
 
   const clos = matrixData?.clos ?? [];
   const plos = matrixData?.plos ?? [];
-  
+
   const initializedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!maHocPhan) {
+    if (!maDeCuong) {
       setDraftValues({});
       initializedKeyRef.current = null;
       return;
@@ -109,7 +196,7 @@ export default function CloPloMatrixPage() {
 
     initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, matrixData]);
+  }, [maDeCuong, maSoNganh, khoa, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return clos.map((clo) => {
@@ -176,9 +263,14 @@ export default function CloPloMatrixPage() {
         const raw = draftValues[key];
         const current = raw != null && raw !== "" ? Number(raw) : null;
 
-        // Thay InputNumber bằng div text tĩnh, giữ style để layout không bị lệch
         return (
-          <div style={{ width: 100, fontWeight: current ? 500 : 400, color: current ? '#000' : '#bfbfbf' }}>
+          <div
+            style={{
+              width: 100,
+              fontWeight: current ? 500 : 400,
+              color: current ? "#000" : "#bfbfbf",
+            }}
+          >
             {current !== null ? current : "-"}
           </div>
         );
@@ -195,27 +287,79 @@ export default function CloPloMatrixPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <Space style={{ marginBottom: 16 }}>
-        <Select
-          style={{ width: 420 }}
-          placeholder="Chọn học phần"
-          options={hocPhanOptions}
-          value={maHocPhan}
-          onChange={(value) => {
-            initializedKeyRef.current = null;
-            setMaHocPhan(value);
-          }}
-          showSearch
-          optionFilterProp="label"
-        />
-        {/* Đã xóa nút LƯU ở đây */}
+      <Space orientation="vertical" size={12} style={{ width: "100%", marginBottom: 16 }}>
+        <Space wrap align="start">
+          <Select
+            style={{ width: 420 }}
+            placeholder="Chọn học phần"
+            options={hocPhanOptions}
+            value={maHocPhan}
+            onChange={(value) => {
+              initializedKeyRef.current = null;
+              setMaHocPhan(value);
+              setMaDeCuong(undefined);
+              setMaSoNganh(undefined);
+              setKhoa(undefined);
+            }}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 280 }}
+            placeholder="Chọn đề cương"
+            options={dcOptions}
+            value={maDeCuong}
+            onChange={(v) => {
+              initializedKeyRef.current = null;
+              setMaDeCuong(v);
+            }}
+            disabled={!maHocPhan || deCuongs.length === 0}
+            showSearch
+            optionFilterProp="label"
+          />
+
+          <Select
+            style={{ width: 360 }}
+            placeholder="Chương trình (ngành) — lọc theo phiên bản"
+            options={programOptions}
+            value={maSoNganh}
+            allowClear
+            onChange={(v) => {
+              initializedKeyRef.current = null;
+              setMaSoNganh(v);
+              setKhoa(undefined);
+            }}
+            showSearch
+            optionFilterProp="label"
+            disabled={!maDeCuong}
+          />
+
+          <Select
+            style={{ width: 220 }}
+            placeholder="Khóa (K)"
+            options={cohortOptions}
+            value={khoa}
+            allowClear
+            onChange={(v) => {
+              initializedKeyRef.current = null;
+              setKhoa(v ?? undefined);
+            }}
+            showSearch
+            optionFilterProp="label"
+            disabled={!maSoNganh}
+          />
+        </Space>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          Chọn đề cương trước, sau đó chọn đủ <strong>ngành + khóa</strong> để lọc PLO/mapping theo phiên bản CTĐT (read-only).
+        </Text>
       </Space>
 
       <Table
         rowKey="key"
         loading={isLoading}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         scroll={{ x: 1400 }}
         pagination={false}
         bordered
@@ -229,7 +373,6 @@ export default function CloPloMatrixPage() {
               const total = getColumnTotal(plo.maPLO);
               const isValid = total === 0 || total === 1;
 
-              // Giữ nguyên logic báo Đỏ nếu tổng cột sai
               return (
                 <Table.Summary.Cell key={plo.maPLO} index={idx + 2}>
                   <Tag color={isValid ? "green" : "red"}>{total}</Tag>

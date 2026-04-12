@@ -94,6 +94,7 @@ export default function GiangVienPage() {
     const columns: ColumnsType<GiangVien> = [
         { title: "MSGV", dataIndex: "MSGV", width: 120 },
         { title: "Họ tên", dataIndex: "hoTen", ellipsis: true },
+        { title: "Giới tính", dataIndex: "gioiTinh", width: 100, render: (v) => v ?? "-" },
         { title: "Email", dataIndex: "email", width: 220, render: (v) => v ?? "-" },
         { title: "SĐT", dataIndex: "soDienThoai", width: 140, render: (v) => v ?? "-" },
         {
@@ -162,6 +163,7 @@ export default function GiangVienPage() {
             MSGV: values.MSGV,
             maDonVi: values.maDonVi,
             hoTen: values.hoTen,
+            gioiTinh: values.gioiTinh,
             email: values.email,
             soDienThoai: values.soDienThoai,
             hocVi: values.hocVi,
@@ -239,14 +241,30 @@ export default function GiangVienPage() {
                         </Form.Item>
                     </Space>
 
-                    <Form.Item
-                        label="Họ tên"
-                        name="hoTen"
-                        rules={[{ required: true, message: "Nhập họ tên" }]}
-                        style={{ width: "100%" }}
-                    >
-                        <Input />
-                    </Form.Item>
+                    <Space style={{ width: "100%" }} size={12}>
+                        <Form.Item
+                            label="Họ tên"
+                            name="hoTen"
+                            rules={[{ required: true, message: "Nhập họ tên" }]}
+                            style={{ flex: 1, width: 300 }}
+                        >
+                            <Input />
+                        </Form.Item>
+                        <Form.Item
+                            label="Giới tính"
+                            name="gioiTinh"
+                            rules={[{ required: true, message: "Chọn giới tính" }]}
+                            style={{ width: 160 }}
+                        >
+                            <Select
+                                options={[
+                                    { label: "Nam", value: "Nam" },
+                                    { label: "Nữ", value: "Nữ" },
+                                ]}
+                                placeholder="Chọn"
+                            />
+                        </Form.Item>
+                    </Space>
 
                     <Space style={{ width: "100%" }} size={12}>
                         <Form.Item label="Email" name="email" style={{ flex: 1, width: 230}}>

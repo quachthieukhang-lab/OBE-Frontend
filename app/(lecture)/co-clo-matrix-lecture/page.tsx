@@ -11,16 +11,24 @@ type HocPhan = {
   tenHocPhan: string;
 };
 
+type DeCuongChiTiet = {
+  maDeCuong: string;
+  maHocPhan: string;
+  phienBan: string;
+  trangThai: "draft" | "active" | "archived";
+  ngayApDung?: string | null;
+};
+
 type CLO = {
   maCLO: string;
-  maHocPhan: string;
+  maDeCuong: string;
   code?: string | null;
   noiDungChuanDauRa: string;
 };
 
 type CO = {
   maCO: string;
-  maHocPhan: string;
+  maDeCuong: string;
   code?: string | null;
   noiDungChuanDauRa: string;
 };
@@ -51,9 +59,16 @@ async function listHocPhan() {
   return res.data;
 }
 
-async function listCloCoMatrix(maHocPhan: string) {
+async function listDeCuong(maHocPhan: string) {
+  const res = await http.get<DeCuongChiTiet[]>("/de-cuong-chi-tiet", {
+    params: { maHocPhan },
+  });
+  return res.data;
+}
+
+async function listCloCoMatrix(maDeCuong: string) {
   const res = await http.get<CloCoMatrixResponse>(
-    `/hoc-phan/${maHocPhan}/clo-co-mapping`
+    `/de-cuong-chi-tiet/${maDeCuong}/clo-co-mapping`
   );
   return res.data;
 }
@@ -64,6 +79,7 @@ function buildCellKey(maCO: string, maCLO: string) {
 
 export default function CloCoMatrixPage() {
   const [maHocPhan, setMaHocPhan] = useState<string>();
+  const [maDeCuong, setMaDeCuong] = useState<string>();
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
 
   const { data: hocPhans = [] } = useQuery({
@@ -71,10 +87,32 @@ export default function CloCoMatrixPage() {
     queryFn: listHocPhan,
   });
 
-  const { data: matrixData, isLoading } = useQuery({
-    queryKey: ["clo-co-mapping", maHocPhan],
-    queryFn: () => listCloCoMatrix(maHocPhan!),
+  const { data: deCuongs = [] } = useQuery({
+    queryKey: ["de-cuong-chi-tiet", { maHocPhan }],
+    queryFn: () => listDeCuong(maHocPhan!),
     enabled: !!maHocPhan,
+  });
+
+  const dcOptions = useMemo(
+    () =>
+      deCuongs.map((dc: DeCuongChiTiet) => ({
+        label: `${dc.phienBan} (${dc.trangThai})`,
+        value: dc.maDeCuong,
+      })),
+    [deCuongs]
+  );
+
+  useMemo(() => {
+    if (!maHocPhan || deCuongs.length === 0) return;
+    const active = deCuongs.find((dc) => dc.trangThai === "active");
+    if (active) setMaDeCuong(active.maDeCuong);
+    else if (deCuongs.length === 1) setMaDeCuong(deCuongs[0].maDeCuong);
+  }, [maHocPhan, deCuongs]);
+
+  const { data: matrixData, isLoading } = useQuery({
+    queryKey: ["clo-co-mapping", maDeCuong],
+    queryFn: () => listCloCoMatrix(maDeCuong!),
+    enabled: !!maDeCuong,
   });
 
   const clos = matrixData?.clos ?? [];
@@ -82,7 +120,7 @@ export default function CloCoMatrixPage() {
 
   const initializedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!maHocPhan) {
+    if (!maDeCuong) {
       setDraftValues({});
       initializedKeyRef.current = null;
       return;
@@ -109,7 +147,7 @@ export default function CloCoMatrixPage() {
 
     initializedKeyRef.current = initKey;
     setDraftValues(next);
-  }, [maHocPhan, matrixData]);
+  }, [maDeCuong, matrixData]);
 
   const rows: MatrixRow[] = useMemo(() => {
     return cos.map((co) => {
@@ -176,7 +214,6 @@ export default function CloCoMatrixPage() {
         const raw = draftValues[key];
         const current = raw != null && raw !== "" ? Number(raw) : null;
 
-        // Đã thay thế InputNumber bằng text tĩnh, giữ nguyên style layout
         return (
           <div style={{ width: 100, fontWeight: current ? 500 : 400, color: current ? '#000' : '#bfbfbf' }}>
             {current !== null ? current : "-"}
@@ -204,18 +241,32 @@ export default function CloCoMatrixPage() {
           onChange={(value) => {
             initializedKeyRef.current = null;
             setMaHocPhan(value);
+            setMaDeCuong(undefined);
           }}
           showSearch
           optionFilterProp="label"
         />
-        {/* Đã xóa nút LƯU ở đây */}
+
+        <Select
+          style={{ width: 280 }}
+          placeholder="Chọn đề cương"
+          options={dcOptions}
+          value={maDeCuong}
+          onChange={(v) => {
+            initializedKeyRef.current = null;
+            setMaDeCuong(v);
+          }}
+          disabled={!maHocPhan || deCuongs.length === 0}
+          showSearch
+          optionFilterProp="label"
+        />
       </Space>
 
       <Table
         rowKey="key"
         loading={isLoading}
         columns={columns}
-        dataSource={maHocPhan ? rows : []}
+        dataSource={maDeCuong ? rows : []}
         scroll={{ x: 1400 }}
         pagination={false}
         bordered
@@ -229,7 +280,6 @@ export default function CloCoMatrixPage() {
               const total = getColumnTotal(clo.maCLO);
               const isValid = total === 0 || total === 1;
 
-              // Giữ nguyên logic báo Đỏ nếu tổng cột sai
               return (
                 <Table.Summary.Cell key={clo.maCLO} index={idx + 2}>
                   <Tag color={isValid ? "green" : "red"}>{total}</Tag>

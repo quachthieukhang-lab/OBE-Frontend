@@ -17,4 +17,20 @@ export type HocPhan = {
 
   ngonNguGiangDay?: string | null;
   taiLieuThamKhao?: string | null;
+
+  donVi?: DonVi | null;
+  deCuongs?: Array<{
+    maDeCuong: string;
+    phienBan: string;
+    trangThai: string;
+    ngayApDung?: string | null;
+  }> | null;
+};
+
+export type PloOption = {
+  maPLO: string;
+  maSoNganh: string;
+  khoa: number;
+  code: string;
+  noiDungChuanDauRa: string;
 };

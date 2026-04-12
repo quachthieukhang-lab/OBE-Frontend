@@ -6,6 +6,8 @@ export type ChuongTrinhDaoTao = {
 export type PLO = {
   maPLO: string; // uuid
   maSoNganh: string;
+  /** Phiên bản CTĐT theo khóa (trả về từ API / ma trận học phần) */
+  khoa?: number | null;
 
   noiDungChuanDauRa: string;
   code?: string | null; // PLO1...

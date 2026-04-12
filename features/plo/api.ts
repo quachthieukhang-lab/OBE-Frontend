@@ -6,21 +6,35 @@ export async function listPrograms() {
   return res.data;
 }
 
-export async function listPlo(maSoNganh: string) {
-  const res = await http.get<PLO[]>(`/chuong-trinh-dao-tao/${maSoNganh}/plo`);
+function basePath(maSoNganh: string, khoa: number) {
+  return `/chuong-trinh-dao-tao/${maSoNganh}/khoa/${khoa}/plo`;
+}
+
+export async function listPlo(maSoNganh: string, khoa: number) {
+  const res = await http.get<PLO[]>(basePath(maSoNganh, khoa));
   return res.data;
 }
 
-export async function createPlo(maSoNganh: string, payload: Omit<PLO, "maPLO" | "maSoNganh">) {
-  const res = await http.post<PLO>(`/chuong-trinh-dao-tao/${maSoNganh}/plo`, payload);
+/** Body không gửi `khoa` (backend lấy từ URL). */
+export async function createPlo(
+  maSoNganh: string,
+  khoa: number,
+  payload: Omit<PLO, "maPLO" | "maSoNganh" | "khoa">
+) {
+  const res = await http.post<PLO>(basePath(maSoNganh, khoa), payload);
   return res.data;
 }
 
-export async function updatePlo(maSoNganh: string, maPLO: string, payload: Partial<PLO>) {
-  const res = await http.patch<PLO>(`/chuong-trinh-dao-tao/${maSoNganh}/plo/${maPLO}`, payload);
+export async function updatePlo(
+  maSoNganh: string,
+  khoa: number,
+  maPLO: string,
+  payload: Partial<Omit<PLO, "maPLO" | "maSoNganh" | "khoa">>
+) {
+  const res = await http.patch<PLO>(`${basePath(maSoNganh, khoa)}/${maPLO}`, payload);
   return res.data;
 }
 
-export async function deletePlo(maSoNganh: string, maPLO: string) {
-  await http.delete(`/chuong-trinh-dao-tao/${maSoNganh}/plo/${maPLO}`);
+export async function deletePlo(maSoNganh: string, khoa: number, maPLO: string) {
+  await http.delete(`${basePath(maSoNganh, khoa)}/${maPLO}`);
 }
