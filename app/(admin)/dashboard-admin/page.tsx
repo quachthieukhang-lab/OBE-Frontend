@@ -83,7 +83,7 @@ function ChartCard({
 }) {
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       title={<span style={{ fontWeight: 600, fontSize: 15 }}>{title}</span>}
       style={{
         borderRadius: 12,
@@ -112,7 +112,7 @@ function KpiCard({
 }) {
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       hoverable
       onClick={onClick}
       style={{

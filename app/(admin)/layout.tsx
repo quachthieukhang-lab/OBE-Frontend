@@ -21,8 +21,10 @@ import {
   BarChartOutlined,
   TableOutlined,
   UnorderedListOutlined,
+  RadarChartOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
+import { RadarChart } from "recharts";
 
 const { Sider, Header, Content } = Layout;
 
@@ -41,7 +43,7 @@ function getItem(
 
 const MENU: MenuItem[] = [
   getItem("Dashboard", "/dashboard-admin", <AppstoreOutlined />),
-  getItem("Bảng phân tích OBE", "/admin-obe-dashboard",<AppstoreOutlined /> ),
+  getItem("Bảng phân tích OBE", "/admin-obe-dashboard",<RadarChartOutlined /> ),
   getItem("Danh mục cơ sở", "sub-master", <ApartmentOutlined />, [
     getItem("Đơn vị", "/don-vi", <ApartmentOutlined />),
     getItem("Niên khóa", "/nien-khoa", <CalendarOutlined />),
