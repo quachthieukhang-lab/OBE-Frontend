@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Layout, Menu, Button } from "antd";
+import { Avatar, Layout, Menu, Button, Space, Tag, Typography } from "antd";
 import type { MenuProps } from "antd";
 import {
   AppstoreOutlined,
@@ -22,9 +22,10 @@ import {
   TableOutlined,
   UnorderedListOutlined,
   RadarChartOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
-import { RadarChart } from "recharts";
+import { useAuth, logout } from "@/lib/auth";
 
 const { Sider, Header, Content } = Layout;
 
@@ -57,7 +58,7 @@ const MENU: MenuItem[] = [
     getItem("CTĐT - Niên khóa", "/chuong-trinh-nien-khoa", <CalendarOutlined />),
     getItem("Học phần", "/hoc-phan", <BookOutlined />),
     getItem("CTĐT - Học phần", "/chuong-trinh-dao-tao-hoc-phan", <BookOutlined />),
-    getItem("Đề cương chi tiết", "/de-cuong-chi-tiet", <FileDoneOutlined />),
+    getItem("Đề cương", "/de-cuong-chi-tiet", <FileDoneOutlined />),
     getItem("Cách đánh giá", "/cach-danh-gia", <FileTextOutlined />),
   ]),
 
@@ -82,6 +83,7 @@ const MENU: MenuItem[] = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const user = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [manualOpenKeys, setManualOpenKeys] = useState<string[]>([]);
@@ -175,8 +177,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             justifyContent: "space-between",
           }}
         >
-          <div style={{ fontWeight: 600 }}>Admin</div>
-          <Button>Logout</Button>
+          <Space>
+            <Avatar size="small" icon={<UserOutlined />} />
+            <Typography.Text strong>
+              {user.hoTen ?? user.email ?? "Admin"}
+            </Typography.Text>
+            {user.role && (
+              <Tag color="red" style={{ marginLeft: 4 }}>
+                {user.role}
+              </Tag>
+            )}
+          </Space>
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={() => {
+              logout();
+              router.push("/sign-in");
+            }}
+          >
+            Đăng xuất
+          </Button>
         </Header>
 
         <Content style={{ padding: 24, background: "#f5f5f5" }}>

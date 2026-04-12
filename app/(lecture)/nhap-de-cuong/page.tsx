@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Descriptions,
   Form,
   Input,
@@ -104,8 +105,11 @@ export default function NhapDeCuongPage() {
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       updateAssignmentStatus(id, { trangThai: status }),
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       message.success("Cập nhật trạng thái thành công");
+      setSelected((prev) =>
+        prev ? { ...prev, trangThai: variables.status } : null,
+      );
       await qc.invalidateQueries({ queryKey: ["lecturer-assignments"] });
     },
     onError: (e: any) =>
@@ -371,7 +375,9 @@ export default function NhapDeCuongPage() {
             id: selected.maBanPhanCong,
             payload: {
               phienBan: v.phienBan,
-              ngayApDung: v.ngayApDung ?? undefined,
+              ngayApDung: v.ngayApDung
+                ? v.ngayApDung.format("YYYY-MM-DD")
+                : undefined,
               ghiChu: v.ghiChu ?? undefined,
             },
           });
@@ -388,7 +394,7 @@ export default function NhapDeCuongPage() {
             <Input placeholder="VD: 2024-v1" />
           </Form.Item>
           <Form.Item label="Ngày áp dụng" name="ngayApDung">
-            <Input placeholder="YYYY-MM-DD" />
+            <DatePicker style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item label="Ghi chú" name="ghiChu">
             <Input.TextArea rows={2} />
@@ -610,6 +616,7 @@ function CloTab({ maDeCuong }: { maDeCuong: string }) {
       setOpen(false);
       form.resetFields();
       await qc.invalidateQueries({ queryKey: ["lecturer-clo", maDeCuong] });
+      await qc.invalidateQueries({ queryKey: ["lecturer-syllabus"] });
     },
     onError: (e: any) =>
       message.error(e?.response?.data?.message ?? "Thất bại"),
@@ -681,7 +688,7 @@ function CloTab({ maDeCuong }: { maDeCuong: string }) {
         loading={isLoading}
         columns={columns}
         dataSource={rows}
-        pagination={false}
+        pagination={{ pageSize: 10, hideOnSinglePage: true }}
         size="small"
       />
       <Modal
@@ -758,6 +765,7 @@ function CoTab({ maDeCuong }: { maDeCuong: string }) {
       setOpen(false);
       form.resetFields();
       await qc.invalidateQueries({ queryKey: ["lecturer-co", maDeCuong] });
+      await qc.invalidateQueries({ queryKey: ["lecturer-syllabus"] });
     },
     onError: (e: any) =>
       message.error(e?.response?.data?.message ?? "Thất bại"),
@@ -829,7 +837,7 @@ function CoTab({ maDeCuong }: { maDeCuong: string }) {
         loading={isLoading}
         columns={columns}
         dataSource={rows}
-        pagination={false}
+        pagination={{ pageSize: 10, hideOnSinglePage: true }}
         size="small"
       />
       <Modal
@@ -915,6 +923,7 @@ function CdgTab({ maDeCuong }: { maDeCuong: string }) {
       setOpen(false);
       form.resetFields();
       await qc.invalidateQueries({ queryKey: ["lecturer-cdg", maDeCuong] });
+      await qc.invalidateQueries({ queryKey: ["lecturer-syllabus"] });
     },
     onError: (e: any) =>
       message.error(e?.response?.data?.message ?? "Thất bại"),
@@ -961,10 +970,7 @@ function CdgTab({ maDeCuong }: { maDeCuong: string }) {
             size="small"
             onClick={() => {
               setEditing(row);
-              form.setFieldsValue({
-                ...row,
-                trongSo: Number(row.trongSo),
-              });
+              form.setFieldsValue(row);
               setOpen(true);
             }}
           >
@@ -991,7 +997,7 @@ function CdgTab({ maDeCuong }: { maDeCuong: string }) {
           onClick={() => {
             setEditing(null);
             form.resetFields();
-            form.setFieldsValue({ trongSo: 0 });
+            form.setFieldsValue({ trongSo: "0" });
             setOpen(true);
           }}
         >
@@ -1003,7 +1009,7 @@ function CdgTab({ maDeCuong }: { maDeCuong: string }) {
         loading={isLoading}
         columns={columns}
         dataSource={rows}
-        pagination={false}
+        pagination={{ pageSize: 10, hideOnSinglePage: true }}
         size="small"
       />
       <Modal

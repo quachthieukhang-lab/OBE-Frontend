@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Layout, Menu, Button } from "antd";
+import { Avatar, Layout, Menu, Button, Space, Tag, Typography } from "antd";
 import type { MenuProps } from "antd";
 import {
   AppstoreOutlined,
@@ -22,8 +22,10 @@ import {
   FileDoneOutlined,
   BarChartOutlined,
   TableOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth, logout } from "@/lib/auth";
 
 const { Sider, Header, Content } = Layout;
 
@@ -82,6 +84,7 @@ const MENU: MenuItem[] = [
 export default function LectureLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const user = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [manualOpenKeys, setManualOpenKeys] = useState<string[]>([]);
@@ -175,8 +178,26 @@ export default function LectureLayout({ children }: { children: React.ReactNode 
             justifyContent: "space-between",
           }}
         >
-          <div style={{ fontWeight: 600 }}>Admin</div>
-          <Button>Logout</Button>
+          <Space>
+            <Avatar size="small" icon={<UserOutlined />} />
+            <Typography.Text strong>
+              {user.hoTen ?? user.email ?? "Giảng viên"}
+            </Typography.Text>
+            {user.role && (
+              <Tag color="blue" style={{ marginLeft: 4 }}>
+                {user.role}
+              </Tag>
+            )}
+          </Space>
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={() => {
+              logout();
+              router.push("/sign-in");
+            }}
+          >
+            Đăng xuất
+          </Button>
         </Header>
 
         <Content style={{ padding: 24, background: "#f5f5f5" }}>
