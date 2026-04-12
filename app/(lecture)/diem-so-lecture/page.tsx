@@ -345,31 +345,29 @@ export default function DiemSoLecturePage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <Space style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }} wrap>
-        <Space wrap>
-          <Select
-            style={{ width: 420 }}
-            placeholder="Chọn lớp học phần mình phụ trách"
-            options={classOptions}
-            value={selectedClass}
-            onChange={(v) => {
-              setSelectedClass(v);
-              setQ("");
-            }}
-            showSearch
-            optionFilterProp="label"
-            loading={classLoading}
-          />
+      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+        <Select
+          style={{ flex: 1, minWidth: 0 }}
+          placeholder="Chọn lớp học phần mình phụ trách"
+          options={classOptions}
+          value={selectedClass}
+          onChange={(v) => {
+            setSelectedClass(v);
+            setQ("");
+          }}
+          showSearch
+          optionFilterProp="label"
+          loading={classLoading}
+        />
 
-          <Input.Search
-            placeholder="Tìm MSSV / tên sinh viên..."
-            allowClear
-            onSearch={setQ}
-            style={{ width: 280 }}
-            disabled={!selectedClass}
-          />
-        </Space>
-      </Space>
+        <Input.Search
+          placeholder="Tìm MSSV / tên sinh viên..."
+          allowClear
+          onSearch={setQ}
+          style={{ width: 300, flexShrink: 0 }}
+          disabled={!selectedClass}
+        />
+      </div>
 
       <Table
         rowKey="maDangKy"
