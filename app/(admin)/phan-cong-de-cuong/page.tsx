@@ -44,12 +44,11 @@ const VAI_TRO_OPTIONS = [
   { label: "approver", value: "approver" },
 ];
 
+/** Khớp API phân công đề cương (cùng tập giá trị với trang nhập đề cương giảng viên). */
 const TRANG_THAI_OPTIONS = [
-  { label: "assigned", value: "assigned" },
-  { label: "in_progress", value: "in_progress" },
-  { label: "submitted", value: "submitted" },
-  { label: "approved", value: "approved" },
-  { label: "rejected", value: "rejected" },
+  { label: "assigned — Đã phân công", value: "assigned" },
+  { label: "in_progress — Đang thực hiện", value: "in_progress" },
+  { label: "completed — Hoàn thành", value: "completed" },
 ];
 
 export default function PhanCongDeCuongPage() {
